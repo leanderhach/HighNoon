@@ -1,135 +1,142 @@
 import { io, type Socket } from "socket.io-client";
-import type { HighNoonClientConstructor, HighNoonClientOptions } from "./types";
+import type {
+  HighNoonClientConstructor,
+  HighNoonClientOptions,
+  HNResponse,
+  Initialize,
+} from "./types";
 import chalk from "chalk";
 import { nanoid } from "nanoid";
+import { EventEmitter } from "events";
+
+export type HighNoonEvents = "relayHandshake" | "relayHandshakeFailed";
 
 export class HighNoonBase {
-    client: RTCPeerConnection;
-    channel: Promise<RTCDataChannel>;
-    options: HighNoonClientOptions;
-    socket: Socket;
-    projectId: string;
-    apiToken: string;
+  options: HighNoonClientOptions;
+  socket: Socket | null = null;
+  projectId: string;
+  apiToken: string;
+  private eventTarget: EventTarget | EventEmitter;
+  webSocketTimeout: number = 10000;
+  initialized: boolean = false;
+  connectedToRoom: boolean = false;
+  currentRoom: string | null = null;
+  type: string;
 
-    constructor(options: HighNoonClientConstructor, type: "client" | "server") {
-        // setup options
-        this.options = {
-            channelName: `${type}-${options.channelName}` || `highnoon-${type}-${nanoid()}`,
-            showDebug: options.showDebug || false,
-            iceServers: options.iceServers || [],
-        };
+  constructor(options: HighNoonClientConstructor, type: "client" | "server") {
+    // setup options
+    this.options = {
+      channelName:
+        `${type}-${options.channelName}` || `highnoon-${type}-${nanoid()}`,
+      showDebug: options.showDebug || false,
+      iceServers: options.iceServers || [],
+    };
+    this.type = type;
 
-        if (!options.projectId) {
-            throw new Error("projectId is required");
-        }
-
-        if (!options.apiToken) {
-            throw new Error("apiToken is required");
-        }
-
-        this.projectId = options.projectId;
-        this.apiToken = options.apiToken;
-
-        // make a new RTC peer connection
-        this.client = new RTCPeerConnection({
-            iceServers: this.options.iceServers,
-        });
-
-        //
-        this.channel = new Promise((resolve) => {
-            const c = this.client.createDataChannel(this.options.channelName!);
-
-            c.onopen = ({ target }) => {
-                if (target!.readyState === "open") {
-                    if (this.options.showDebug) {
-                        console.group(chalk.blue(`Change in ${this.options.channelName}`));
-                        console.log("Data channel opened");
-                        console.groupEnd();
-                    }
-                    resolve(c);
-                }
-            };
-        });
-
-        // initialize the socket for signalling
-        this.socket = io("http://localhost:8080", {
-            auth: {
-                projectId: this.projectId,
-                apiToken: this.apiToken,
-            },
-        });
-
-        this.socket.on("connect_error", (err) => this.socketConnectionError(err));
-        this.socket.on("greeting", (msg) => console.log(msg));
+    if (!options.projectId) {
+      throw new Error("projectId is required");
     }
 
-    //---------------------------//
-    // INITIALIZATION FUNCTIONS //
-    //--------------------------//
+    if (!options.apiToken) {
+      throw new Error("apiToken is required");
+    }
 
+    this.projectId = options.projectId;
+    this.apiToken = options.apiToken;
 
-    initialize = async () => {
-        // create a new RTC offer and bind listeners to it
-        const offer = new RTCSessionDescription(await this.client.createOffer());
-        this.client.setLocalDescription(offer);
-        this.client.onicecandidate = this.onIceCandidate;
-        this.client.onicegatheringstatechange = this.onIceGatheringStateChange;
-    };
+    // make a new RTC peer connection
 
-    //--------------------------//
-    // RTC ACCESSORY FUNCTIONS //
-    //-------------------------//
+    // setup event emitter
+    const isNode =
+      typeof process !== "undefined" &&
+      process.versions != null &&
+      process.versions.node != null;
+    if (isNode) {
+      this.eventTarget = new EventEmitter();
+    } else {
+      this.eventTarget = new EventTarget();
+    }
+  }
 
-    onIceCandidate = async ({
-        candidate,
-    }: {
-        candidate: RTCIceCandidate | null;
-    }) => {
-        if (this.options.showDebug) {
-            console.group(chalk.blue(`Change in ${this.options.channelName}`));
-            console.log("ICE candidate: ", candidate);
-            console.groupEnd();
-        }
-    };
+  //---------------------------//
+  // INITIALIZATION FUNCTIONS //
+  //--------------------------//
 
-    onIceGatheringStateChange = async () => {
-        if (this.options.showDebug) {
-            console.group(chalk.blue(`Change in ${this.options.channelName}`));
-            console.log(
-                "ICE gathering state changed: ",
-                this.client.iceGatheringState
-            );
-            if (this.client.iceGatheringState === "complete") {
-                console.log("ICE gathering complete");
-            }
-            console.groupEnd();
-        }
-    };
+  protected initBase = async () => {
+    return new Promise<HNResponse<Initialize>>(async (resolve) => {
+      // connect to the signalling server
+      // initialize the socket for signalling
+      this.socket = io("http://localhost:8080", {
+        auth: {
+          projectId: this.projectId,
+          apiToken: this.apiToken,
+        },
+        extraHeaders: {
+          type: this.type,
+        },
+        autoConnect: true,
+      });
 
-    //-----------------------------//
-    // SOCKET ACCESSORY FUNCTIONS //
-    //----------------------------//
+      this.socket.on("connect_error", (err) => {
+        this.socketConnectionError(err);
+        resolve({ data: null, error: "Connection error" });
+      });
 
-    socketConnectionError = (err: Error) => {
-        this.printErrorMessage(
-            `Error establishing a signalling connection: ${err.message} \n ${err.message.includes("Authentication error")
-                ? "Check that your projectId and apiToken are correct."
-                : ""
-            }`
-        );
-    };
+      this.socket.on("connect_timeout", (err) => {
+        this.socketConnectionError(err);
+        resolve({ data: null, error: "Connection timeout" });
+      });
 
-    printErrorMessage = (message: string) => {
-        console.error(chalk.red(message));
-    };
+      resolve({ data: { status: "connected" }, error: null });
+    });
+  };
 
-    printSuccessMessage = (message: string) => {
-        console.log(chalk.green(message));
-    };
+  //------------------------------//
+  // EVENT LISTENERS AND HELPERS //
+  //-----------------------------//
 
-    printDebugMessage = (message: string) => {
-        if (this.options.showDebug) {
-            console.log(chalk.blue(message));
-        }
-    };
+  private emitEvent(eventName: string, detail?: any) {
+    if (this.eventTarget instanceof EventEmitter) {
+      this.eventTarget.emit(eventName, detail);
+    } else {
+      const event = new CustomEvent(eventName, { detail });
+      this.eventTarget.dispatchEvent(event);
+    }
+  }
+
+  on(eventName: HighNoonEvents, listener: (...args: any[]) => void) {
+    if (this.eventTarget instanceof EventEmitter) {
+      this.eventTarget.on(eventName, listener);
+    } else {
+      this.eventTarget.addEventListener(eventName, listener as EventListener);
+    }
+  }
+
+  //-----------------------------//
+  // SOCKET ACCESSORY FUNCTIONS //
+  //----------------------------//
+
+  socketConnectionError = (err: Error) => {
+    this.printErrorMessage(
+      `Error establishing a signalling connection: ${err.message} \n ${
+        err.message.includes("Authentication error")
+          ? "Check that your projectId and apiToken are correct."
+          : ""
+      }`
+    );
+  };
+
+  protected printErrorMessage = (message: string) => {
+    console.error(chalk.red(message));
+  };
+
+  protected printSuccessMessage = (message: string) => {
+    console.log(chalk.green(message));
+  };
+
+  protected printDebugMessage = (message: string) => {
+    if (this.options.showDebug) {
+      console.log(chalk.blue(message));
+    }
+  };
 }
