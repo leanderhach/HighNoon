@@ -29,6 +29,16 @@ export type Initialize = {
 
 export type HighNoonServerPeer = {
   peer: RTCPeerConnection;
-  channel: RTCDataChannel;
+  channelPromise: Promise<RTCDataChannel>;
+  channel: RTCDataChannel | null;
   userId: string;
+  socketId: string;
+  // local content
+  localIceCandidates: RTCIceCandidate[];
+  localIceCandidatesCollected: boolean;
+  localOffer: RTCSessionDescription;
+  // foreign offers
+  foreignOffer: RTCSessionDescription | null;
+  foreignIceCandidates: RTCIceCandidate[];
+  foreignIceCandidatesCollected: boolean;
 };

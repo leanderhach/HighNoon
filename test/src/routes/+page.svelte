@@ -6,6 +6,7 @@
   let server: HighNoonServer;
 
   let clientConnected = false;
+  let clientCanMessage = false;
 
   async function startRTCClient() {
     client = new HighNoonClient({
@@ -16,6 +17,10 @@
     });
 
     await client.init();
+
+    client.on("serverConnectionEstablished", () => {
+      clientCanMessage = true;
+    });
   }
 
   async function startRTCServer() {
@@ -50,6 +55,33 @@
     }
   }
 
+  async function sendClientHello() {
+    if (!client) {
+      console.log("client does not exist yet");
+      return;
+    }
+
+    client.sendMessage("hello world");
+  }
+
+  async function sendArbitrary() {
+    if (!client) {
+      console.log("client does not exist yet");
+      return;
+    }
+
+    client.sendMessage("arbitray message");
+  }
+
+  async function sendJoke() {
+    if (!client) {
+      console.log("client does not exist yet");
+      return;
+    }
+
+    client.sendMessage("why did the chicken cross the road?");
+  }
+
   let roomName = "";
 </script>
 
@@ -60,6 +92,11 @@
   <button on:click={JoinRoom}>Join Room</button>
   {#if clientConnected}
     {client.currentRoom}
+  {/if}
+  {#if clientCanMessage}
+    <button on:click={sendClientHello}>Send Hello</button>
+    <button on:click={sendArbitrary}>Send Arbitrary</button>
+    <button on:click={sendJoke}>Send Joke</button>
   {/if}
 {/if}
 

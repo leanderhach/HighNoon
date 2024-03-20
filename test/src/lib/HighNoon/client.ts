@@ -11,65 +11,61 @@ import {
   type RoomJoinData,
 } from "./types";
 import { HighNoonBase } from "./base";
+import type { ServerOfferEvent } from "./serverTypes";
 
 export default class HighNoonClient extends HighNoonBase {
   userId: string;
   peer: RTCPeerConnection;
-  channel: Promise<RTCDataChannel>;
+  channelPromise: Promise<RTCDataChannel>;
+  channel: RTCDataChannel | null = null;
   iceCandidates: RTCIceCandidate[] = [];
 
   constructor(options: HighNoonClientConstructor) {
     super(options, "client");
-    this.userId = options.userId || `user-${nanoid()}`;
+    this.userId = options.userId
+      ? options.userId + "-" + nanoid(4)
+      : `user-${nanoid(8)}`;
 
     this.peer = new RTCPeerConnection({
       iceServers: this.options.iceServers,
     });
 
     // make new RTC data channel
-    this.channel = new Promise((resolve) => {
-      const c = this.peer.createDataChannel(this.options.channelName!);
-
-      c.onopen = ({ target }) => {
-        if (target!.readyState === "open") {
-          if (this.options.showDebug) {
-            console.group(chalk.blue(`Change in ${this.options.channelName}`));
-            console.log("Data channel opened");
-            console.groupEnd();
-          }
-          resolve(c);
-        }
+    this.channelPromise = new Promise((resolve) => {
+      this.peer.ondatachannel = (event) => {
+        console.log("data connection open!!!");
+        resolve(event.channel);
       };
     });
   }
 
   init = async () => {
-    return new Promise<HNResponse<Initialize>>(async (resolve) => {
-      await this.initBase();
+    await this.initBase(this.userId);
 
-      // create a new RTC offer and bind listeners to it
-      this.peer
-        .createOffer()
-        .then((offer) => {
-          this.peer.setLocalDescription(offer);
-          this.peer.onicecandidate = this.onIceCandidate;
-          this.peer.onicegatheringstatechange = this.onIceGatheringStateChange;
-
-          this.socket!.on("handshake", (data) => {
-            if (this.socket!.connected) {
-              this.initialized = true;
-              resolve({ data: { status: "connected" }, error: null });
-            } else {
-              this.initialized = false;
-              resolve({ data: null, error: "Connection failed" });
-            }
-          });
-        })
-        .catch((error) => {
-          this.initialized = false;
-          resolve({ data: null, error: error.toString() });
-        });
+    // create a new RTC offer and bind listeners to it
+    this.socket!.on("handshake", (data) => {
+      if (this.socket!.connected) {
+        this.initialized = true;
+      } else {
+        this.initialized = false;
+      }
     });
+
+    this.socket?.on("server_offer", (data: ServerOfferEvent) =>
+      this.generateResponse(data)
+    );
+
+    this.channelPromise.then((channel) => {
+      this.channel = channel;
+      this.channel.onmessage = (event) => this.handleChannelMessage(event);
+      this.emitEvent("serverConnectionEstablished");
+    });
+  };
+
+  sendMessage = (message: string) => {
+    if (this.channel) {
+      this.channel.send(message);
+    }
   };
 
   connectToRoom = async (roomId: string): Promise<HNResponse<RoomJoinData>> => {
@@ -90,18 +86,10 @@ export default class HighNoonClient extends HighNoonBase {
         userId: this.userId,
       });
       this.socket!.on("room_joined", (data) => {
+        console.log("the room was joined");
         clearTimeout(timeout);
         this.connectedToRoom = true;
         this.currentRoom = data.roomId;
-
-        this.socket?.emit("client_candidates", this.iceCandidates);
-        resolve({
-          data: {
-            room: data.roomId,
-            connectedClients: data.connectedClients,
-          },
-          error: null,
-        });
       });
       this.socket?.on("room_not_found", () => {
         clearTimeout(timeout);
@@ -111,8 +99,26 @@ export default class HighNoonClient extends HighNoonBase {
     });
   };
 
-  receiveServerSignalling = (data: any) => {
+  generateResponse = async (data: ServerOfferEvent) => {
+    console.log("recieved offer from server");
     console.log(data);
+    // set the remote description of the connection to that recieved from the server
+    this.peer.setRemoteDescription(data.offer);
+
+    // transfer the server ice candiates to the client
+    for (const candidate of data.candidates) {
+      this.peer.addIceCandidate(candidate);
+    }
+
+    // create an answer session description
+    const answer = new RTCSessionDescription(await this.peer.createAnswer());
+    this.peer.setLocalDescription(answer);
+
+    this.peer.onicecandidate = (event) => this.onIceCandidate(event);
+    this.peer.onicegatheringstatechange = () =>
+      this.onIceGatheringStateChange(answer);
+
+    console.log("sending counter offer to server to complete connection...");
   };
 
   //--------------------------//
@@ -124,25 +130,33 @@ export default class HighNoonClient extends HighNoonBase {
   }: {
     candidate: RTCIceCandidate | null;
   }) => {
-    if (this.options.showDebug) {
-      console.group(chalk.blue(`Change in ${this.options.channelName}`));
-      console.log("ICE candidate: ", candidate);
-      console.groupEnd();
-    }
-
     if (candidate) {
       this.iceCandidates.push(candidate);
     }
   };
 
-  onIceGatheringStateChange = async () => {
-    if (this.options.showDebug) {
-      console.group(chalk.blue(`Change in ${this.options.channelName}`));
-      console.log("ICE gathering state changed: ", this.peer.iceGatheringState);
-      if (this.peer.iceGatheringState === "complete") {
-        console.log("ICE gathering complete");
-      }
-      console.groupEnd();
+  onIceGatheringStateChange = async (answer: RTCSessionDescription) => {
+    if (this.peer.iceGatheringState == "complete") {
+      console.log(
+        "client ice gathering complete, preparing to send candidates..."
+      );
+
+      const response = {
+        candidates: this.iceCandidates,
+        answer: answer,
+        userId: this.userId,
+        roomId: this.currentRoom,
+      };
+
+      console.log("sending this response:");
+      console.log(response);
+
+      this.socket?.emit("send_client_offer_response", response);
     }
+  };
+
+  handleChannelMessage = (event: MessageEvent) => {
+    console.log("message recieved from server:");
+    console.log(event.data);
   };
 }

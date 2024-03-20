@@ -9,7 +9,10 @@ import chalk from "chalk";
 import { nanoid } from "nanoid";
 import { EventEmitter } from "events";
 
-export type HighNoonEvents = "relayHandshake" | "relayHandshakeFailed";
+export type HighNoonEvents =
+  | "relayHandshake"
+  | "relayHandshakeFailed"
+  | "serverConnectionEstablished";
 
 export class HighNoonBase {
   options: HighNoonClientOptions;
@@ -62,7 +65,7 @@ export class HighNoonBase {
   // INITIALIZATION FUNCTIONS //
   //--------------------------//
 
-  protected initBase = async () => {
+  protected initBase = async (userId?: string) => {
     return new Promise<HNResponse<Initialize>>(async (resolve) => {
       // connect to the signalling server
       // initialize the socket for signalling
@@ -73,6 +76,7 @@ export class HighNoonBase {
         },
         extraHeaders: {
           type: this.type,
+          userId: userId || nanoid(4),
         },
         autoConnect: true,
       });
@@ -95,7 +99,7 @@ export class HighNoonBase {
   // EVENT LISTENERS AND HELPERS //
   //-----------------------------//
 
-  private emitEvent(eventName: string, detail?: any) {
+  protected emitEvent(eventName: string, detail?: any) {
     if (this.eventTarget instanceof EventEmitter) {
       this.eventTarget.emit(eventName, detail);
     } else {
