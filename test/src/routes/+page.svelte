@@ -1,7 +1,6 @@
 <script lang="ts">
-  import HighNoonClient from "$lib/HighNoon/client";
-  import HighNoonServer from "$lib/HighNoon/server";
-
+  import { HighNoonClient, HighNoonServer } from "highnoon";
+  
   let client: HighNoonClient;
   let server: HighNoonServer;
 
