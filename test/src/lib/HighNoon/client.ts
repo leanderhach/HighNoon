@@ -33,7 +33,6 @@ export default class HighNoonClient extends HighNoonBase {
     // make new RTC data channel
     this.channelPromise = new Promise((resolve) => {
       this.peer.ondatachannel = (event) => {
-        console.log("data connection open!!!");
         resolve(event.channel);
       };
     });
@@ -62,12 +61,6 @@ export default class HighNoonClient extends HighNoonBase {
     });
   };
 
-  sendMessage = (message: string) => {
-    if (this.channel) {
-      this.channel.send(message);
-    }
-  };
-
   connectToRoom = async (roomId: string): Promise<HNResponse<RoomJoinData>> => {
     if (!this.initialized) {
       return {
@@ -86,22 +79,22 @@ export default class HighNoonClient extends HighNoonBase {
         userId: this.userId,
       });
       this.socket!.on("room_joined", (data) => {
-        console.log("the room was joined");
         clearTimeout(timeout);
         this.connectedToRoom = true;
         this.currentRoom = data.roomId;
+        this.printDebugMessage("Connected to room: " + data.roomId);
       });
       this.socket?.on("room_not_found", () => {
         clearTimeout(timeout);
         this.connectedToRoom = false;
+        this.printErrorMessage("Room not found");
         resolve({ data: null, error: "Room not found" });
       });
     });
   };
 
   generateResponse = async (data: ServerOfferEvent) => {
-    console.log("recieved offer from server");
-    console.log(data);
+    this.printDebugMessage("Recieved server offer!");
     // set the remote description of the connection to that recieved from the server
     this.peer.setRemoteDescription(data.offer);
 
@@ -117,8 +110,6 @@ export default class HighNoonClient extends HighNoonBase {
     this.peer.onicecandidate = (event) => this.onIceCandidate(event);
     this.peer.onicegatheringstatechange = () =>
       this.onIceGatheringStateChange(answer);
-
-    console.log("sending counter offer to server to complete connection...");
   };
 
   //--------------------------//
@@ -137,10 +128,6 @@ export default class HighNoonClient extends HighNoonBase {
 
   onIceGatheringStateChange = async (answer: RTCSessionDescription) => {
     if (this.peer.iceGatheringState == "complete") {
-      console.log(
-        "client ice gathering complete, preparing to send candidates..."
-      );
-
       const response = {
         candidates: this.iceCandidates,
         answer: answer,
@@ -148,8 +135,7 @@ export default class HighNoonClient extends HighNoonBase {
         roomId: this.currentRoom,
       };
 
-      console.log("sending this response:");
-      console.log(response);
+      this.printDebugMessage("Sending answer to server");
 
       this.socket?.emit("send_client_offer_response", response);
     }
@@ -158,5 +144,11 @@ export default class HighNoonClient extends HighNoonBase {
   handleChannelMessage = (event: MessageEvent) => {
     console.log("message recieved from server:");
     console.log(event.data);
+  };
+
+  sendMessage = (message: string) => {
+    if (this.channel) {
+      this.channel.send(message);
+    }
   };
 }

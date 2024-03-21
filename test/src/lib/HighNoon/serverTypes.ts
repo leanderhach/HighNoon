@@ -9,3 +9,11 @@ export type ServerOfferEvent = {
   offer: RTCSessionDescription;
   to: string;
 };
+
+export type ClientAnswerEvent = {
+  candidates: RTCIceCandidate[];
+  answer: RTCSessionDescription;
+  userId: string;
+  roomId: string;
+  from: string;
+};

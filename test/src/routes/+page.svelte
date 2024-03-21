@@ -27,16 +27,13 @@
     server = new HighNoonServer({
       showDebug: true,
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      projectId: "3R9VBpp",
+      projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
     });
-
-    console.log(server);
 
     const { error } = await server.init();
 
     if (!error) {
-      console.log("server started!");
       const { data, error } = await server.createRoom();
       console.log(data!.room);
     }
@@ -82,6 +79,15 @@
     client.sendMessage("why did the chicken cross the road?");
   }
 
+  async function sendServerMessage() {
+    if (!server) {
+      console.log("server does not exist yet");
+      return;
+    }
+
+    server.sendMessageToAll("hello from server");
+  }
+
   let roomName = "";
 </script>
 
@@ -98,6 +104,9 @@
     <button on:click={sendArbitrary}>Send Arbitrary</button>
     <button on:click={sendJoke}>Send Joke</button>
   {/if}
+{/if}
+{#if server}
+  <button on:click={sendServerMessage}>Send From Server</button>
 {/if}
 
 <style>
