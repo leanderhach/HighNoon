@@ -1,14 +1,8 @@
 import { nanoid } from "nanoid";
-import chalk from "chalk";
-import { io } from "socket.io-client";
-import type { Socket } from "socket.io-client";
-import {
-  type CreateRoomData,
-  type HNResponse,
-  type HighNoonClientConstructor,
-  type HighNoonClientOptions,
-  type Initialize,
-  type RoomJoinData,
+import type {
+  HNResponse,
+  HighNoonClientConstructor,
+  RoomJoinData,
 } from "./types";
 import { HighNoonBase } from "./base";
 import type { ClientAnswerEvent, ServerOfferEvent } from "./serverTypes";
@@ -41,6 +35,8 @@ export default class HighNoonClient extends HighNoonBase {
   init = async () => {
     await this.initBase(this.userId);
 
+    this.socket?.off("handshake");
+
     // create a new RTC offer and bind listeners to it
     this.socket!.on("handshake", (data) => {
       if (this.socket!.connected) {
@@ -70,14 +66,22 @@ export default class HighNoonClient extends HighNoonBase {
     }
 
     return new Promise<HNResponse<RoomJoinData>>((resolve) => {
+      console.log("this should run once");
       const timeout = setTimeout(() => {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
+
+      console.log(this.socket);
+
+      this.socket!.off("room_joined");
+      this.socket!.off("room_not_found");
+      this.socket!.off("join_room");
 
       this.socket!.emit("join_room", {
         roomId: roomId,
         userId: this.userId,
       });
+
       this.socket!.on("room_joined", (data) => {
         clearTimeout(timeout);
         this.connectedToRoom = true;
@@ -93,7 +97,7 @@ export default class HighNoonClient extends HighNoonBase {
     });
   };
 
-  generateResponse = async (data: ServerOfferEvent) => {
+  private generateResponse = async (data: ServerOfferEvent) => {
     this.printDebugMessage("Recieved server offer!");
     // set the remote description of the connection to that recieved from the server
     this.peer.setRemoteDescription(data.offer);
@@ -116,7 +120,7 @@ export default class HighNoonClient extends HighNoonBase {
   // RTC ACCESSORY FUNCTIONS //
   //-------------------------//
 
-  onIceCandidate = async ({
+  private onIceCandidate = async ({
     candidate,
   }: {
     candidate: RTCIceCandidate | null;
@@ -126,7 +130,7 @@ export default class HighNoonClient extends HighNoonBase {
     }
   };
 
-  onIceGatheringStateChange = async (answer: RTCSessionDescription) => {
+  private onIceGatheringStateChange = async (answer: RTCSessionDescription) => {
     if (this.peer.iceGatheringState == "complete") {
       const response: ClientAnswerEvent = {
         candidates: this.iceCandidates,
@@ -141,9 +145,8 @@ export default class HighNoonClient extends HighNoonBase {
     }
   };
 
-  handleChannelMessage = (event: MessageEvent) => {
-    console.log("message recieved from server:");
-    console.log(event.data);
+  private handleChannelMessage = (event: MessageEvent) => {
+    this.emitEvent("messageReceived", event.data);
   };
 
   sendMessage = (message: string) => {

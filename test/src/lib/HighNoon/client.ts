@@ -45,7 +45,6 @@ export default class HighNoonClient extends HighNoonBase {
 
     // create a new RTC offer and bind listeners to it
     this.socket!.on("handshake", (data) => {
-      console.log("there was a handshake");
       if (this.socket!.connected) {
         this.initialized = true;
       } else {
@@ -73,13 +72,12 @@ export default class HighNoonClient extends HighNoonBase {
     }
 
     return new Promise<HNResponse<RoomJoinData>>((resolve) => {
-      console.log("this should run once")
+      console.log("this should run once");
       const timeout = setTimeout(() => {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
 
       console.log(this.socket);
-
 
       this.socket!.off("room_joined");
       this.socket!.off("room_not_found");
@@ -89,7 +87,6 @@ export default class HighNoonClient extends HighNoonBase {
         roomId: roomId,
         userId: this.userId,
       });
-
 
       this.socket!.on("room_joined", (data) => {
         clearTimeout(timeout);
@@ -155,8 +152,6 @@ export default class HighNoonClient extends HighNoonBase {
   };
 
   private handleChannelMessage = (event: MessageEvent) => {
-    console.log("message received from server:");
-    console.log(event.data);
     this.emitEvent("messageReceived", event.data);
   };
 

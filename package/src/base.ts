@@ -1,4 +1,5 @@
-import { io, type Socket } from "socket.io-client";
+import { io } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 import type {
   HighNoonClientConstructor,
   HighNoonClientOptions,
@@ -69,7 +70,7 @@ export class HighNoonBase {
     return new Promise<HNResponse<Initialize>>(async (resolve) => {
       // connect to the signalling server
       // initialize the socket for signalling
-      this.socket = io("https://service.gethighnoon.com", {
+      this.socket = io("http://localhost:8080", {
         auth: {
           projectId: this.projectId,
           apiToken: this.apiToken,
@@ -122,10 +123,9 @@ export class HighNoonBase {
 
   socketConnectionError = (err: Error) => {
     this.printErrorMessage(
-      `Error establishing a signalling connection: ${err.message} \n ${
-        err.message.includes("Authentication error")
-          ? "Check that your projectId and apiToken are correct."
-          : ""
+      `Error establishing a signalling connection: ${err.message} \n ${err.message.includes("Authentication error")
+        ? "Check that your projectId and apiToken are correct."
+        : ""
       }`
     );
   };
