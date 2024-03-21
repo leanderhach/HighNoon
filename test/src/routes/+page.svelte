@@ -9,6 +9,8 @@
   let clientCanMessage = false;
 
   async function startRTCClient() {
+    if(client) return;
+    
     client = new HighNoonClient({
       showDebug: true,
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],

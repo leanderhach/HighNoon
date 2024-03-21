@@ -41,11 +41,8 @@ export default class HighNoonClient extends HighNoonBase {
   init = async () => {
     await this.initBase(this.userId);
 
-    this.socket?.off("handshake");
-
     // create a new RTC offer and bind listeners to it
     this.socket!.on("handshake", (data) => {
-      console.log("there was a handshake");
       if (this.socket!.connected) {
         this.initialized = true;
       } else {
@@ -73,24 +70,14 @@ export default class HighNoonClient extends HighNoonBase {
     }
 
     return new Promise<HNResponse<RoomJoinData>>((resolve) => {
-      console.log("this should run once")
       const timeout = setTimeout(() => {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
-
-      console.log(this.socket);
-
-
-      this.socket!.off("room_joined");
-      this.socket!.off("room_not_found");
-      this.socket!.off("join_room");
 
       this.socket!.emit("join_room", {
         roomId: roomId,
         userId: this.userId,
       });
-
-
       this.socket!.on("room_joined", (data) => {
         clearTimeout(timeout);
         this.connectedToRoom = true;
@@ -106,7 +93,7 @@ export default class HighNoonClient extends HighNoonBase {
     });
   };
 
-  private generateResponse = async (data: ServerOfferEvent) => {
+  generateResponse = async (data: ServerOfferEvent) => {
     this.printDebugMessage("Recieved server offer!");
     // set the remote description of the connection to that recieved from the server
     this.peer.setRemoteDescription(data.offer);
@@ -129,7 +116,7 @@ export default class HighNoonClient extends HighNoonBase {
   // RTC ACCESSORY FUNCTIONS //
   //-------------------------//
 
-  private onIceCandidate = async ({
+  onIceCandidate = async ({
     candidate,
   }: {
     candidate: RTCIceCandidate | null;
@@ -139,7 +126,7 @@ export default class HighNoonClient extends HighNoonBase {
     }
   };
 
-  private onIceGatheringStateChange = async (answer: RTCSessionDescription) => {
+  onIceGatheringStateChange = async (answer: RTCSessionDescription) => {
     if (this.peer.iceGatheringState == "complete") {
       const response: ClientAnswerEvent = {
         candidates: this.iceCandidates,
@@ -154,10 +141,9 @@ export default class HighNoonClient extends HighNoonBase {
     }
   };
 
-  private handleChannelMessage = (event: MessageEvent) => {
-    console.log("message received from server:");
+  handleChannelMessage = (event: MessageEvent) => {
+    console.log("message recieved from server:");
     console.log(event.data);
-    this.emitEvent("messageReceived", event.data);
   };
 
   sendMessage = (message: string) => {

@@ -25,6 +25,9 @@ export default class HighNoonServer extends HighNoonBase {
     return { data, error };
   };
 
+  receiveClientSignalling = (data: any) => {
+    console.log(data);
+  };
 
   createRoom = async () => {
     return new Promise<HNResponse<CreateRoomData>>((resolve) => {
@@ -40,7 +43,7 @@ export default class HighNoonServer extends HighNoonBase {
     });
   };
 
-  private createPeerConnection = async (data: ClientJoinEvent) => {
+  createPeerConnection = async (data: ClientJoinEvent) => {
     // create a new peer connection
     const peer = new RTCPeerConnection({
       iceServers: this.options.iceServers,
@@ -49,9 +52,8 @@ export default class HighNoonServer extends HighNoonBase {
     const channelPromise: Promise<RTCDataChannel> = new Promise((resolve) => {
       const c = peer.createDataChannel(this.options.channelName!);
 
-      c.onopen = (event) => {
-        const target = event.target as RTCDataChannel;
-        if (target.readyState === "open") {
+      c.onopen = ({ target }) => {
+        if (target!.readyState === "open") {
           this.printDebugMessage(
             "Connection established with client: " + data.userId
           );
@@ -90,7 +92,7 @@ export default class HighNoonServer extends HighNoonBase {
     this.foreignPeers.push(newPeer);
   };
 
-  private onPeerIceCandidate = (event: RTCPeerConnectionIceEvent, userId: string) => {
+  onPeerIceCandidate = (event: RTCPeerConnectionIceEvent, userId: string) => {
     if (event.candidate) {
       // push the ice candidate to the right peer
       this.foreignPeers = this.foreignPeers.map((peer) => {
@@ -102,7 +104,7 @@ export default class HighNoonServer extends HighNoonBase {
     }
   };
 
-  private onIceGatheringStateChange = (peer: RTCPeerConnection, userId: string) => {
+  onIceGatheringStateChange = (peer: RTCPeerConnection, userId: string) => {
     if (peer.iceGatheringState === "complete") {
       // update the foreign peers list
       this.foreignPeers = this.foreignPeers.map((p) => {
@@ -115,9 +117,6 @@ export default class HighNoonServer extends HighNoonBase {
       // send a message to the client to with the ice candidates to complete the connection
       const peer = this.foreignPeers.find((p) => p.userId === userId);
 
-      console.log("sending offer");
-      console.log(peer?.localOffer);
-
       if (peer) {
         this.socket?.emit("send_offer_to_client", {
           to: peer.socketId,
@@ -128,7 +127,7 @@ export default class HighNoonServer extends HighNoonBase {
     }
   };
 
-  private connectClient = async (data: ClientAnswerEvent) => {
+  connectClient = async (data: ClientAnswerEvent) => {
     const peer = this.foreignPeers.find((p) => p.socketId === data.from);
     if (peer) {
       peer.foreignIceCandidates = data.candidates;
@@ -141,7 +140,7 @@ export default class HighNoonServer extends HighNoonBase {
     }
   };
 
-  private handleChannelMessage = (
+  handleChannelMessage = (
     event: MessageEvent,
     peer: HighNoonServerPeer,
     channel: RTCDataChannel
@@ -150,7 +149,6 @@ export default class HighNoonServer extends HighNoonBase {
       `Message received from ${peer.userId}: \n ${event.data}`
     );
     channel.send("got your message");
-    this.emitEvent("messageReceived", event.data);
   };
 
   sendMessageToAll = (message: string) => {

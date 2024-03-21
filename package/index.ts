@@ -1,5 +1,5 @@
-import { HighNoonClient } from "./client";
-import { HighNoonServer } from "./server";
+import HighNoonClient from "./src/client";
+import HighNoonServer from "./src/server";
 
 
-export default { HighNoonClient, HighNoonServer };
+export { HighNoonClient, HighNoonServer };
