@@ -3,17 +3,13 @@ import type { Socket } from "socket.io-client";
 import type {
   HighNoonClientConstructor,
   HighNoonClientOptions,
+  HighNoonEvents,
   HNResponse,
   Initialize,
 } from "./types";
 import chalk from "chalk";
 import { nanoid } from "nanoid";
 import { EventEmitter } from "events";
-
-export type HighNoonEvents =
-  | "relayHandshake"
-  | "relayHandshakeFailed"
-  | "serverConnectionEstablished";
 
 export class HighNoonBase {
   options: HighNoonClientOptions;

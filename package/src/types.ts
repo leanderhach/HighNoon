@@ -42,3 +42,5 @@ export type HighNoonServerPeer = {
   foreignIceCandidates: RTCIceCandidate[];
   foreignIceCandidatesCollected: boolean;
 };
+
+export type HighNoonEvents = "serverConnectionEstablished" | "messageReceived";
