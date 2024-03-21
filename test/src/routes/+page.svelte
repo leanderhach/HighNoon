@@ -1,6 +1,6 @@
 <script lang="ts">
   import { HighNoonClient, HighNoonServer } from "highnoon";
-  
+
   let client: HighNoonClient;
   let server: HighNoonServer;
 
@@ -11,7 +11,6 @@
     if(client) return;
     
     client = new HighNoonClient({
-      showDebug: true,
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
