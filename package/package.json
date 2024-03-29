@@ -1,12 +1,13 @@
 {
   "name": "highnoon",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "description": "",
   "main": "dist/index.js",
+  "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "esbuild src/index.ts --bundle --outfile=dist/index.js",
+    "build": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=cjs && esbuild src/index.ts --bundle --outfile=dist/index.esm.js --format=esm",
     "build:types": "npx tsc --emitDeclarationOnly"
   },
   "keywords": [],
