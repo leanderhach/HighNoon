@@ -14,12 +14,18 @@ dependencies:
   events:
     specifier: ^3.3.0
     version: 3.3.0
+  highnoon:
+    specifier: 'link:'
+    version: 'link:'
   nanoid:
     specifier: ^5.0.6
     version: 5.0.6
   socket.io-client:
     specifier: ^4.7.5
     version: 4.7.5
+  typescript:
+    specifier: ^5.4.3
+    version: 5.4.3
 
 devDependencies:
   esbuild:
@@ -349,6 +355,12 @@ packages:
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /typescript@5.4.3:
+    resolution: {integrity: sha512-KrPd3PKaCLr78MalgiwJnA25Nm8HAmdwN3mYUYZgG/wizIo9EainNVQI9/yDavtVFRN2h3k8uf3GLHuhDMgEHg==}
+    engines: {node: '>=14.17'}
+    hasBin: true
     dev: false
 
   /undici-types@5.26.5:
