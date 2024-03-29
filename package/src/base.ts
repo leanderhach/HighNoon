@@ -51,6 +51,7 @@ export class HighNoonBase {
       typeof process !== "undefined" &&
       process.versions != null &&
       process.versions.node != null;
+
     if (isNode) {
       this.eventTarget = new EventEmitter();
     } else {

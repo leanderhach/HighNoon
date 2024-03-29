@@ -8,15 +8,20 @@ import type {
   Initialize,
 } from "./types";
 import type { ClientAnswerEvent, ClientJoinEvent } from "./serverTypes";
+import { isWebRTCAvailable } from "./util";
 
 export default class HighNoonServer extends HighNoonBase {
   foreignPeers: HighNoonServerPeer[] = [];
 
   constructor(options: HighNoonClientConstructor) {
+    if (!isWebRTCAvailable()) {
+      throw new Error("WebRTC is not available in this environment");
+    }
     super(options, "server");
   }
 
   init = async () => {
+
     const { data, error } = await this.initBase();
 
     // server specific initialization

@@ -8,8 +8,8 @@
   let clientCanMessage = false;
 
   async function startRTCClient() {
-    if(client) return;
-    
+    if (client) return;
+
     client = new HighNoonClient({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       projectId: "3R9VBppB",

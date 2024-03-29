@@ -6,6 +6,7 @@ import type {
 } from "./types";
 import { HighNoonBase } from "./base";
 import type { ClientAnswerEvent, ServerOfferEvent } from "./serverTypes";
+import { isWebRTCAvailable } from "./util";
 
 export default class HighNoonClient extends HighNoonBase {
   userId: string;
@@ -15,6 +16,10 @@ export default class HighNoonClient extends HighNoonBase {
   iceCandidates: RTCIceCandidate[] = [];
 
   constructor(options: HighNoonClientConstructor) {
+    if (!isWebRTCAvailable()) {
+      throw new Error("WebRTC is not available in this environment");
+    }
+
     super(options, "client");
     this.userId = options.userId
       ? options.userId + "-" + nanoid(4)
@@ -33,6 +38,7 @@ export default class HighNoonClient extends HighNoonBase {
   }
 
   init = async () => {
+
     await this.initBase(this.userId);
 
     this.socket?.off("handshake");
