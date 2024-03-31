@@ -1,6 +1,6 @@
 {
   "name": "highnoon",
-  "version": "0.7.9",
+  "version": "0.7.10",
   "description": "",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
