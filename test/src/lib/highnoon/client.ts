@@ -67,27 +67,23 @@ export default class HighNoonClient extends HighNoonBase {
     }
 
     return new Promise<HNResponse<RoomJoinData>>((resolve) => {
-      console.log("this should run once");
       const timeout = setTimeout(() => {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
 
-      console.log(this.socket);
-
-      this.socket!.off("room_joined");
-      this.socket!.off("room_not_found");
-      this.socket!.off("join_room");
+      console.log("debug is: " + this.options.showDebug)
 
       this.socket!.emit("join_room", {
         roomId: roomId,
         userId: this.userId,
       });
 
-      this.socket!.on("room_joined", (data) => {
+      this.socket!.on("room_joined", (res) => {
         clearTimeout(timeout);
         this.connectedToRoom = true;
-        this.currentRoom = data.roomId;
-        this.printDebugMessage("Connected to room: " + data.roomId);
+        this.currentRoom = res.roomId;
+        this.printDebugMessage("Connected to room: " + res.roomId);
+        resolve({ data: { room: res.roomId, connectedClients: res.connectedClients }, error: null })
       });
       this.socket?.on("room_not_found", () => {
         clearTimeout(timeout);

@@ -30,7 +30,7 @@ export class HighNoonBase {
         `${type}-${options.channelName}` || `highnoon-${type}-${nanoid()}`,
       showDebug: options.showDebug || false,
       iceServers: options.iceServers || [],
-      signallingOverride: options.signallingOverride || null,
+      signallingOverride: options.signallingOverride || undefined,
     };
     this.type = type;
 
@@ -80,6 +80,10 @@ export class HighNoonBase {
         },
         autoConnect: true,
       });
+
+      this.socket.onAny((eventName, args) => {
+        this.printDebugMessage(`an event was recieved: ${eventName} \n Data: \n ${JSON.stringify(args)}`)
+      })
 
       this.socket.on("connect_error", (err) => {
         this.socketConnectionError(err);

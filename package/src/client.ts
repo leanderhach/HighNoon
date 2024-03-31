@@ -71,7 +71,14 @@ export default class HighNoonClient extends HighNoonBase {
   };
 
   connectToRoom = async (roomId: string): Promise<HNResponse<RoomJoinData>> => {
+    if (this.options.showDebug) {
+      this.printDebugMessage("trying to connect to room with id" + roomId);
+    }
+
     if (!this.initialized) {
+      if (this.options.showDebug) {
+        this.printDebugMessage("the client is not initialized")
+      }
       return {
         data: null,
         error: "Client not initialized",
@@ -79,16 +86,16 @@ export default class HighNoonClient extends HighNoonBase {
     }
 
     return new Promise<HNResponse<RoomJoinData>>((resolve) => {
-      console.log("this should run once");
+
       const timeout = setTimeout(() => {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
 
-      console.log(this.socket);
-
       this.socket!.off("room_joined");
       this.socket!.off("room_not_found");
       this.socket!.off("join_room");
+
+      this.printDebugMessage("trying to join a room with id " + roomId + " as user " + this.userId);
 
       this.socket!.emit("join_room", {
         roomId: roomId,
@@ -100,10 +107,18 @@ export default class HighNoonClient extends HighNoonBase {
         this.connectedToRoom = true;
         this.currentRoom = data.roomId;
         this.printDebugMessage("Connected to room: " + data.roomId);
+        resolve({
+          data: {
+            room: data.roomId,
+            connectedClients: data.connectedClients
+          },
+          error: null
+        })
       });
-      this.socket?.on("room_not_found", () => {
+      this.socket!.on("room_not_found", () => {
         clearTimeout(timeout);
         this.connectedToRoom = false;
+
         this.printErrorMessage("Room not found");
         resolve({ data: null, error: "Room not found" });
       });

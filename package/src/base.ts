@@ -80,6 +80,10 @@ export class HighNoonBase {
         autoConnect: true,
       });
 
+      this.socket.onAny((eventName, args) => {
+        this.printDebugMessage(`an event was recieved: ${eventName} \n Data: \n ${JSON.stringify(args)}`)
+      })
+
       this.socket.on("connect_error", (err) => {
         this.socketConnectionError(err);
         resolve({ data: null, error: "Connection error" });
