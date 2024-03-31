@@ -21,6 +21,7 @@ export default class HighNoonServer extends HighNoonBase {
   }
 
   init = async () => {
+
     const { data, error } = await this.initBase();
 
     // server specific initialization

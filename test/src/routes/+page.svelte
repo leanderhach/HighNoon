@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { HighNoonClient, HighNoonServer } from "highnoon";
+  import { HighNoonClient, HighNoonServer } from "$lib/highnoon";
+  import { parse } from "svelte/compiler";
 
   let client: HighNoonClient;
   let server: HighNoonServer;
@@ -18,6 +19,15 @@
     });
 
     await client.init();
+    console.log(JSON.parse(JSON.stringify(client.socket?.connected)));
+
+    const { data, error } = await client.connectToRoom(roomName);
+
+    console.log(data, error);
+
+    if (client.connectedToRoom) {
+      clientConnected = true;
+    }
 
     client.on("serverConnectionEstablished", () => {
       clientCanMessage = true;
@@ -40,20 +50,6 @@
       console.log(data!.room);
     }
   }
-
-  async function JoinRoom() {
-    if (!client) {
-      console.log("client does not exist yet");
-      return;
-    }
-
-    const { data, error } = await client.connectToRoom(roomName);
-
-    if (client.connectedToRoom) {
-      clientConnected = true;
-    }
-  }
-
   async function sendClientHello() {
     if (!client) {
       console.log("client does not exist yet");
@@ -94,18 +90,15 @@
 </script>
 
 <button on:click={startRTCServer}>Start Server</button>
-<button on:click={startRTCClient}>Start Client</button>
-{#if client}
-  <input type="text" bind:value={roomName} />
-  <button on:click={JoinRoom}>Join Room</button>
-  {#if clientConnected}
-    {client.currentRoom}
-  {/if}
-  {#if clientCanMessage}
-    <button on:click={sendClientHello}>Send Hello</button>
-    <button on:click={sendArbitrary}>Send Arbitrary</button>
-    <button on:click={sendJoke}>Send Joke</button>
-  {/if}
+<input type="text" bind:value={roomName} />
+<button on:click={startRTCClient}>Join Room</button>
+{#if clientConnected}
+  {client.currentRoom}
+{/if}
+{#if clientCanMessage}
+  <button on:click={sendClientHello}>Send Hello</button>
+  <button on:click={sendArbitrary}>Send Arbitrary</button>
+  <button on:click={sendJoke}>Send Joke</button>
 {/if}
 {#if server}
   <button on:click={sendServerMessage}>Send From Server</button>

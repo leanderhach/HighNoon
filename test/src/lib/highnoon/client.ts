@@ -40,11 +40,6 @@ export default class HighNoonClient extends HighNoonBase {
   init = async () => {
 
     const res = await this.initBase(this.userId);
-
-    if (res.error) {
-      return res;
-    }
-
     // create a new RTC offer and bind listeners to it
     if (this.socket!.connected) {
       this.initialized = true;
@@ -61,13 +56,6 @@ export default class HighNoonClient extends HighNoonBase {
       this.channel.onmessage = (event) => this.handleChannelMessage(event);
       this.emitEvent("serverConnectionEstablished");
     });
-
-    return {
-      data: {
-        status: this.initialized,
-      },
-      error: null
-    }
   };
 
   connectToRoom = async (roomId: string): Promise<HNResponse<RoomJoinData>> => {
