@@ -14,6 +14,7 @@
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
+      signallingOverride: "http://localhost:8080",
     });
 
     await client.init();
@@ -29,6 +30,7 @@
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
+      signallingOverride: "http://localhost:8080",
     });
 
     const { error } = await server.init();

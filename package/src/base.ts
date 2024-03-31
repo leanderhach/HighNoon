@@ -30,6 +30,7 @@ export class HighNoonBase {
         `${type}-${options.channelName}` || `highnoon-${type}-${nanoid()}`,
       showDebug: options.showDebug || false,
       iceServers: options.iceServers || [],
+      signallingOverride: options.signallingOverride || null,
     };
     this.type = type;
 
