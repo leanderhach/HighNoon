@@ -12,8 +12,8 @@ dependencies:
     specifier: ^3.3.0
     version: 3.3.0
   highnoon:
-    specifier: ^0.7.12
-    version: 0.7.12
+    specifier: ^0.7.13
+    version: 0.7.13
   socket.io-client:
     specifier: ^4.7.4
     version: 4.7.4
@@ -797,8 +797,8 @@ packages:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
     dev: true
 
-  /highnoon@0.7.12:
-    resolution: {integrity: sha512-YK5QKbbfNSVUXjwhjVdnefPWDgWofifPIcBaehsBatLNdt+JFhMd8AuzQXDnwPDG1Z/mPIWj1TPpdDKJAki+hQ==}
+  /highnoon@0.7.13:
+    resolution: {integrity: sha512-H+kcpHPs2fb9vIAVOrGVCCeCHyJrLPPWICsCj6K0mbGSPd2H3aAg8eDwkA9SShwXgkET7N9H1iRJ7izceZl7Sg==}
     dependencies:
       '@types/node': 20.11.30
       chalk: 5.3.0
