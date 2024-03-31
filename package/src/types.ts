@@ -2,6 +2,7 @@ export type HighNoonClientOptions = {
   channelName?: string;
   showDebug?: boolean;
   iceServers?: RTCIceServer[];
+  signallingOverride?: string;
 };
 
 export type HighNoonClientRequirements = {
