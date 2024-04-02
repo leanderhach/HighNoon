@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import type {
+  ClientListData,
   HNResponse,
   HighNoonClientConstructor,
   RoomJoinData,
@@ -40,11 +41,6 @@ export default class HighNoonClient extends HighNoonBase {
   init = async () => {
 
     const res = await this.initBase(this.userId);
-
-    if (res.error) {
-      return res;
-    }
-
     // create a new RTC offer and bind listeners to it
     if (this.socket!.connected) {
       this.initialized = true;
@@ -56,29 +52,46 @@ export default class HighNoonClient extends HighNoonBase {
       this.generateResponse(data)
     );
 
+    this.socket?.on("message", (data) => {
+      this.printDebugMessage("Recieved safe message from server: " + data);
+      this.emitEvent("safeMessage", data);
+    })
+
     this.channelPromise.then((channel) => {
       this.channel = channel;
       this.channel.onmessage = (event) => this.handleChannelMessage(event);
       this.emitEvent("serverConnectionEstablished");
     });
+  };
 
-    return {
-      data: {
-        status: this.initialized,
-      },
-      error: null
+  send = (message: any) => {
+    if (this.channel) {
+      this.channel.send(message);
     }
   };
 
-  connectToRoom = async (roomId: string): Promise<HNResponse<RoomJoinData>> => {
-    if (this.options.showDebug) {
-      this.printDebugMessage("trying to connect to room with id" + roomId);
+  getConnectedClients = async (): Promise<HNResponse<ClientListData>> => {
+    if (!this.connectedToRoom) {
+      return { data: null, error: "Not connected to a room" };
     }
 
+    return new Promise<HNResponse<ClientListData>>((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve({ data: null, error: "Connection Timed out" });
+      }, 10000);
+
+
+      this.socket?.emit("get_connected_clients", { roomId: this.currentRoom });
+
+      this.socket?.on("connected_clients", (res) => {
+        clearTimeout(timeout);
+        resolve({ data: { clients: res.clients, count: res.clients.length }, error: null });
+        });
+      });
+  }
+
+  connectToRoom = async (roomId: string): Promise<HNResponse<RoomJoinData>> => {
     if (!this.initialized) {
-      if (this.options.showDebug) {
-        this.printDebugMessage("the client is not initialized")
-      }
       return {
         data: null,
         error: "Client not initialized",
@@ -86,39 +99,27 @@ export default class HighNoonClient extends HighNoonBase {
     }
 
     return new Promise<HNResponse<RoomJoinData>>((resolve) => {
-
       const timeout = setTimeout(() => {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
 
-      this.socket!.off("room_joined");
-      this.socket!.off("room_not_found");
-      this.socket!.off("join_room");
-
-      this.printDebugMessage("trying to join a room with id " + roomId + " as user " + this.userId);
+      console.log("debug is: " + this.options.showDebug)
 
       this.socket!.emit("join_room", {
         roomId: roomId,
         userId: this.userId,
       });
 
-      this.socket!.on("room_joined", (data) => {
+      this.socket!.on("room_joined", (res) => {
         clearTimeout(timeout);
         this.connectedToRoom = true;
-        this.currentRoom = data.roomId;
-        this.printDebugMessage("Connected to room: " + data.roomId);
-        resolve({
-          data: {
-            room: data.roomId,
-            connectedClients: data.connectedClients
-          },
-          error: null
-        })
+        this.currentRoom = res.roomId;
+        this.printDebugMessage("Connected to room: " + res.roomId);
+        resolve({ data: { room: res.roomId, connectedClients: res.connectedClients }, error: null })
       });
-      this.socket!.on("room_not_found", () => {
+      this.socket?.on("room_not_found", () => {
         clearTimeout(timeout);
         this.connectedToRoom = false;
-
         this.printErrorMessage("Room not found");
         resolve({ data: null, error: "Room not found" });
       });
@@ -174,12 +175,7 @@ export default class HighNoonClient extends HighNoonBase {
   };
 
   private handleChannelMessage = (event: MessageEvent) => {
+    this.printDebugMessage("Recieved message from server: " + JSON.stringify(event.data));
     this.emitEvent("messageReceived", event.data);
-  };
-
-  sendMessage = (message: string) => {
-    if (this.channel) {
-      this.channel.send(message);
-    }
   };
 }

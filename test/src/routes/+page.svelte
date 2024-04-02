@@ -12,11 +12,10 @@
     if (client) return;
 
     client = new HighNoonClient({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
-      signallingOverride: "http://localhost:8080",
       showDebug: true,
+      signallingOverride: "http://localhost:8080",
     });
 
     await client.init();
@@ -26,21 +25,18 @@
 
     console.log(data, error);
 
-    if (client.connectedToRoom) {
-      clientConnected = true;
-    }
-
-    client.on("serverConnectionEstablished", () => {
-      clientCanMessage = true;
+    client.on("serverConnectionEstablished", async () => {
+      const { data: clients, error: thing } = await client.getConnectedClients();
+      console.log(clients, thing);
     });
   }
 
   async function startRTCServer() {
     server = new HighNoonServer({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
-      signallingOverride: "http://localhost:8080",
+      showDebug: true,
+      signallingOverride: "http://localhost:8080"
     });
 
     const { error } = await server.init();
@@ -50,32 +46,6 @@
       console.log(data!.room);
     }
   }
-  async function sendClientHello() {
-    if (!client) {
-      console.log("client does not exist yet");
-      return;
-    }
-
-    client.sendMessage("hello world");
-  }
-
-  async function sendArbitrary() {
-    if (!client) {
-      console.log("client does not exist yet");
-      return;
-    }
-
-    client.sendMessage("arbitray message");
-  }
-
-  async function sendJoke() {
-    if (!client) {
-      console.log("client does not exist yet");
-      return;
-    }
-
-    client.sendMessage("why did the chicken cross the road?");
-  }
 
   async function sendServerMessage() {
     if (!server) {
@@ -83,7 +53,12 @@
       return;
     }
 
-    server.sendMessageToAll("hello from server");
+    server.broadcast("hello from server");
+  }
+
+  async function sendSafe() {
+    console.log("its calling this")
+    server.broadcastSafe("hello from server");
   }
 
   let roomName = "";
@@ -95,13 +70,9 @@
 {#if clientConnected}
   {client.currentRoom}
 {/if}
-{#if clientCanMessage}
-  <button on:click={sendClientHello}>Send Hello</button>
-  <button on:click={sendArbitrary}>Send Arbitrary</button>
-  <button on:click={sendJoke}>Send Joke</button>
-{/if}
 {#if server}
   <button on:click={sendServerMessage}>Send From Server</button>
+  <button on:click={sendSafe}>Send Safe</button>
 {/if}
 
 <style>

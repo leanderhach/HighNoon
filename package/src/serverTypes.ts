@@ -17,3 +17,7 @@ export type ClientAnswerEvent = {
   roomId: string;
   from?: string;
 };
+
+export type ClientGetConnectedClientsEvent = {
+  from: string;
+}

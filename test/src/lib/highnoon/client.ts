@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import type {
+  ClientListData,
   HNResponse,
   HighNoonClientConstructor,
   RoomJoinData,
@@ -51,12 +52,43 @@ export default class HighNoonClient extends HighNoonBase {
       this.generateResponse(data)
     );
 
+    this.socket?.on("message", (data) => {
+      this.printDebugMessage("Recieved safe message from server: " + data);
+      this.emitEvent("safeMessage", data);
+    })
+
     this.channelPromise.then((channel) => {
       this.channel = channel;
       this.channel.onmessage = (event) => this.handleChannelMessage(event);
       this.emitEvent("serverConnectionEstablished");
     });
   };
+
+  send = (message: any) => {
+    if (this.channel) {
+      this.channel.send(message);
+    }
+  };
+
+  getConnectedClients = async (): Promise<HNResponse<ClientListData>> => {
+    if (!this.connectedToRoom) {
+      return { data: null, error: "Not connected to a room" };
+    }
+
+    return new Promise<HNResponse<ClientListData>>((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve({ data: null, error: "Connection Timed out" });
+      }, 10000);
+
+
+      this.socket?.emit("get_connected_clients", { roomId: this.currentRoom });
+
+      this.socket?.on("connected_clients", (res) => {
+        clearTimeout(timeout);
+        resolve({ data: { clients: res.clients, count: res.clients.length }, error: null });
+        });
+      });
+  }
 
   connectToRoom = async (roomId: string): Promise<HNResponse<RoomJoinData>> => {
     if (!this.initialized) {
@@ -143,12 +175,7 @@ export default class HighNoonClient extends HighNoonBase {
   };
 
   private handleChannelMessage = (event: MessageEvent) => {
+    this.printDebugMessage("Recieved message from server: " + JSON.stringify(event.data));
     this.emitEvent("messageReceived", event.data);
-  };
-
-  sendMessage = (message: string) => {
-    if (this.channel) {
-      this.channel.send(message);
-    }
   };
 }
