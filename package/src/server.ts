@@ -26,6 +26,11 @@ export default class HighNoonServer extends HighNoonBase {
 
     const { data, error } = await this.initBase();
 
+    this.socket.off("client_joined");
+    this.socket.off("client_response");
+    this.socket.off("get_connected_clients");
+    this.socket.off("room_created");
+
     // server specific initialization
     this.socket!.on("client_joined", (data) => this.createPeerConnection(data));
     this.socket!.on("client_response", (data) => this.connectClient(data));
@@ -111,6 +116,7 @@ export default class HighNoonServer extends HighNoonBase {
   }
 
   private createPeerConnection = async (data: ClientJoinEvent) => {
+
     // create a new peer connection
     const peer = new RTCPeerConnection({
       iceServers: this.options.iceServers,
@@ -125,12 +131,14 @@ export default class HighNoonServer extends HighNoonBase {
           this.printDebugMessage(
             "Connection established with client: " + data.userId
           );
+          this.emitEvent("clientConnected", data.userId);
           resolve(c);
         }
       };
     });
 
     const offer = new RTCSessionDescription(await peer.createOffer());
+
     peer.setLocalDescription(offer);
     peer.onicecandidate = (event) =>
       this.onPeerIceCandidate(event, data.userId);

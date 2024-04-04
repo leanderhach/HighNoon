@@ -23,24 +23,28 @@ export default class HighNoonServer extends HighNoonBase {
   }
 
   init = async () => {
-
     const { data, error } = await this.initBase();
 
     // server specific initialization
-    this.socket!.on("client_joined", (data) => this.createPeerConnection(data));
-    this.socket!.on("client_response", (data) => this.connectClient(data));
-    this.socket!.on("get_connected_clients", (data) => this.sendConnectedClients(data))
+    this.socket!.on("client_joined", async (data) => await this.createPeerConnection(data));
+    this.socket!.on("client_response", async (data) => await this.connectClient(data));
+    this.socket!.on("get_connected_clients", async (data) => await this.sendConnectedClients(data))
     return { data, error };
   };
 
   createRoom = async () => {
+
+    console.log("creating room once")
+    this.socket!.off("room_created");
+    this.socket!.emit("create_room");
     return new Promise<HNResponse<CreateRoomData>>((resolve) => {
       const timeout = setTimeout(() => {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
 
-      this.socket!.emit("create_room");
+      console.log("this will run once")
       this.socket!.on("room_created", (roomId) => {
+        console.log("a room was created once")
         clearTimeout(timeout);
         resolve({ data: { room: roomId }, error: null });
       });
@@ -111,6 +115,9 @@ export default class HighNoonServer extends HighNoonBase {
   }
 
   private createPeerConnection = async (data: ClientJoinEvent) => {
+
+    console.log("a new client is here")
+    console.log(data)
     // create a new peer connection
     const peer = new RTCPeerConnection({
       iceServers: this.options.iceServers,
@@ -125,12 +132,16 @@ export default class HighNoonServer extends HighNoonBase {
           this.printDebugMessage(
             "Connection established with client: " + data.userId
           );
+
+          console.log(this.foreignPeers);
           resolve(c);
         }
       };
     });
 
     const offer = new RTCSessionDescription(await peer.createOffer());
+
+    console.log(offer)
     peer.setLocalDescription(offer);
     peer.onicecandidate = (event) =>
       this.onPeerIceCandidate(event, data.userId);

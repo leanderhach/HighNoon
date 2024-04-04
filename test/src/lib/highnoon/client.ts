@@ -48,8 +48,8 @@ export default class HighNoonClient extends HighNoonBase {
       this.initialized = false;
     }
 
-    this.socket?.on("server_offer", (data: ServerOfferEvent) =>
-      this.generateResponse(data)
+    this.socket?.on("server_offer", async (data: ServerOfferEvent) =>
+      await this.generateResponse(data)
     );
 
     this.socket?.on("message", (data) => {
@@ -140,9 +140,9 @@ export default class HighNoonClient extends HighNoonBase {
     const answer = new RTCSessionDescription(await this.peer.createAnswer());
     this.peer.setLocalDescription(answer);
 
-    this.peer.onicecandidate = (event) => this.onIceCandidate(event);
-    this.peer.onicegatheringstatechange = () =>
-      this.onIceGatheringStateChange(answer);
+    this.peer.onicecandidate = async (event) => await this.onIceCandidate(event);
+    this.peer.onicegatheringstatechange = async () =>
+      await this.onIceGatheringStateChange(answer);
   };
 
   //--------------------------//

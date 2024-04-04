@@ -52,7 +52,7 @@ export type HighNoonServerPeer = {
   foreignIceCandidatesCollected: boolean;
 };
 
-export type HighNoonEvents = "serverConnectionEstablished" | "messageReceived";
+export type HighNoonEvents = "serverConnectionEstablished" | "messageReceived" | "clientConnected";
 
 
 export type GuranteedMessageResponse = {
