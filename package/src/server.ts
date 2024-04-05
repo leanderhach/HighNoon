@@ -54,7 +54,7 @@ export default class HighNoonServer extends HighNoonBase {
 
   broadcast = (message: any) => {
     this.foreignPeers.forEach((peer) => {
-      peer.channel?.send(message);
+      peer.channel?.send(JSON.stringify(message));
     });
   };
 
@@ -62,7 +62,7 @@ export default class HighNoonServer extends HighNoonBase {
     this.printDebugMessage("Sending safe message to: " + userId);
     const peer = this.foreignPeers.find((p) => p.userId === userId);
     if (peer) {
-      peer.channel?.send(message);
+      peer.channel?.send(JSON.stringify(message));
     }
   };
 
@@ -132,7 +132,7 @@ export default class HighNoonServer extends HighNoonBase {
             "Connection established with client: " + data.userId
           );
           this.emitEvent("clientConnected", data.userId);
-          resolve(c);
+          resolve(c); 
         }
       };
     });
