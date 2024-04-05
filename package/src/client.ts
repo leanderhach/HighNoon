@@ -176,6 +176,6 @@ export default class HighNoonClient extends HighNoonBase {
 
   private handleChannelMessage = (event: MessageEvent) => {
     this.printDebugMessage("Recieved message from server: " + JSON.stringify(event.data));
-    this.emitEvent("messageReceived", event.data);
+    this.emitEvent("messageReceived", JSON.parse(event.data));
   };
 }
