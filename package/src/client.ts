@@ -53,6 +53,7 @@ export default class HighNoonClient extends HighNoonBase {
     );
 
     this.socket?.on("message", (data) => {
+
       this.printDebugMessage("Recieved safe message from server: " + data);
       this.emitEvent("safeMessage", data);
     })
@@ -86,8 +87,8 @@ export default class HighNoonClient extends HighNoonBase {
       this.socket?.on("connected_clients", (res) => {
         clearTimeout(timeout);
         resolve({ data: { clients: res.clients, count: res.clients.length }, error: null });
-        });
       });
+    });
   }
 
   connectToRoom = async (roomId: string): Promise<HNResponse<RoomJoinData>> => {
@@ -102,8 +103,6 @@ export default class HighNoonClient extends HighNoonBase {
       const timeout = setTimeout(() => {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
-
-      console.log("debug is: " + this.options.showDebug)
 
       this.socket!.emit("join_room", {
         roomId: roomId,
@@ -179,3 +178,4 @@ export default class HighNoonClient extends HighNoonBase {
     this.emitEvent("messageReceived", JSON.parse(event.data));
   };
 }
+

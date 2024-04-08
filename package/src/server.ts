@@ -26,10 +26,10 @@ export default class HighNoonServer extends HighNoonBase {
 
     const { data, error } = await this.initBase();
 
-    this.socket.off("client_joined");
-    this.socket.off("client_response");
-    this.socket.off("get_connected_clients");
-    this.socket.off("room_created");
+    this.socket!.off("client_joined");
+    this.socket!.off("client_response");
+    this.socket!.off("get_connected_clients");
+    this.socket!.off("room_created");
 
     // server specific initialization
     this.socket!.on("client_joined", (data) => this.createPeerConnection(data));
@@ -46,6 +46,8 @@ export default class HighNoonServer extends HighNoonBase {
 
       this.socket!.emit("create_room");
       this.socket!.on("room_created", (roomId) => {
+        this.connectedToRoom = true;
+        this.currentRoom = roomId;
         clearTimeout(timeout);
         resolve({ data: { room: roomId }, error: null });
       });
@@ -68,21 +70,24 @@ export default class HighNoonServer extends HighNoonBase {
 
   broadcastSafe = (message: any) => {
     this.printDebugMessage("Broadcasting safe message to all clients: " + JSON.stringify(message));
-    this.socket?.emit("send_message", message);
+    this.socket?.emit("send_message", {
+      roomId: this.currentRoom,
+      payload: message,
+    });
   }
 
   sendToSafe = (userId: string, message: any) => {
     this.printDebugMessage("Sending safe message to: " + userId);
-      const peer = this.foreignPeers.find((p) => p.userId === userId);
-      if (peer) {
-        this.socket?.emit("send_message_to", {
-          to: peer.socketId,
-          payload: message,
-        });
-        return { data: { success: true }, error: null };
-      } else {
-        return { data: { success: false }, error: "Client not found" };
-      }
+    const peer = this.foreignPeers.find((p) => p.userId === userId);
+    if (peer) {
+      this.socket?.emit("send_message_to", {
+        to: peer.socketId,
+        payload: message,
+      });
+      return { data: { success: true }, error: null };
+    } else {
+      return { data: { success: false }, error: "Client not found" };
+    }
   }
 
   getConnectedClients = (): ClientListData => {
@@ -92,7 +97,7 @@ export default class HighNoonServer extends HighNoonBase {
           userId: peer.userId,
           socketId: peer.socketId,
         };
-        
+
         return res;
       }),
       count: this.foreignPeers.length,
@@ -132,7 +137,7 @@ export default class HighNoonServer extends HighNoonBase {
             "Connection established with client: " + data.userId
           );
           this.emitEvent("clientConnected", data.userId);
-          resolve(c); 
+          resolve(c);
         }
       };
     });

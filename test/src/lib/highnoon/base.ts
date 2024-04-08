@@ -76,7 +76,7 @@ export class HighNoonBase {
     return new Promise<HNResponse<Initialize>>(async (resolve) => {
       // connect to the signalling server
       // initialize the socket for signalling
-
+      console.log(this.options.signallingOverride);
       this.socket = io(this.options.signallingOverride || "https://service.gethighnoon.com", {
         auth: {
           projectId: this.projectId,
@@ -86,14 +86,8 @@ export class HighNoonBase {
           type: this.type,
           userId: userId || nanoid(4),
         },
-        autoConnect: false
+        autoConnect: true,
       });
-
-      this.socket.off("connect");
-      this.socket.off("connect_error");
-      this.socket.off("connect_timeout");
-
-      this.socket.connect();
 
       this.socket.onAny((eventName, args) => {
         this.printDebugMessage(`an event was recieved: ${eventName} \n Data: \n ${JSON.stringify(args)}`)
@@ -110,7 +104,7 @@ export class HighNoonBase {
       });
 
       this.socket.on("connect", () => {
-        console.log("the socket got connected")
+        console.log(this.socket?.connected);
         resolve({ data: { status: "connected" }, error: null });
       })
     });

@@ -23,28 +23,31 @@ export default class HighNoonServer extends HighNoonBase {
   }
 
   init = async () => {
+
     const { data, error } = await this.initBase();
 
+    this.socket!.off("client_joined");
+    this.socket!.off("client_response");
+    this.socket!.off("get_connected_clients");
+    this.socket!.off("room_created");
+
     // server specific initialization
-    this.socket!.on("client_joined", async (data) => await this.createPeerConnection(data));
-    this.socket!.on("client_response", async (data) => await this.connectClient(data));
-    this.socket!.on("get_connected_clients", async (data) => await this.sendConnectedClients(data))
+    this.socket!.on("client_joined", (data) => this.createPeerConnection(data));
+    this.socket!.on("client_response", (data) => this.connectClient(data));
+    this.socket!.on("get_connected_clients", (data) => this.sendConnectedClients(data))
     return { data, error };
   };
 
   createRoom = async () => {
-
-    console.log("creating room once")
-    this.socket!.off("room_created");
-    this.socket!.emit("create_room");
     return new Promise<HNResponse<CreateRoomData>>((resolve) => {
       const timeout = setTimeout(() => {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
 
-      console.log("this will run once")
+      this.socket!.emit("create_room");
       this.socket!.on("room_created", (roomId) => {
-        console.log("a room was created once")
+        this.connectedToRoom = true;
+        this.currentRoom = roomId;
         clearTimeout(timeout);
         resolve({ data: { room: roomId }, error: null });
       });
@@ -53,7 +56,7 @@ export default class HighNoonServer extends HighNoonBase {
 
   broadcast = (message: any) => {
     this.foreignPeers.forEach((peer) => {
-      peer.channel?.send(message);
+      peer.channel?.send(JSON.stringify(message));
     });
   };
 
@@ -61,13 +64,16 @@ export default class HighNoonServer extends HighNoonBase {
     this.printDebugMessage("Sending safe message to: " + userId);
     const peer = this.foreignPeers.find((p) => p.userId === userId);
     if (peer) {
-      peer.channel?.send(message);
+      peer.channel?.send(JSON.stringify(message));
     }
   };
 
   broadcastSafe = (message: any) => {
     this.printDebugMessage("Broadcasting safe message to all clients: " + JSON.stringify(message));
-    this.socket?.emit("send_message", message);
+    this.socket?.emit("send_message", {
+      roomId: this.currentRoom,
+      payload: message,
+    });
   }
 
   sendToSafe = (userId: string, message: any) => {
@@ -116,8 +122,6 @@ export default class HighNoonServer extends HighNoonBase {
 
   private createPeerConnection = async (data: ClientJoinEvent) => {
 
-    console.log("a new client is here")
-    console.log(data)
     // create a new peer connection
     const peer = new RTCPeerConnection({
       iceServers: this.options.iceServers,
@@ -132,16 +136,14 @@ export default class HighNoonServer extends HighNoonBase {
           this.printDebugMessage(
             "Connection established with client: " + data.userId
           );
-
-          console.log(this.foreignPeers);
-          resolve(c);
+          this.emitEvent("clientConnected", data.userId);
+          resolve(c); 
         }
       };
     });
 
     const offer = new RTCSessionDescription(await peer.createOffer());
 
-    console.log(offer)
     peer.setLocalDescription(offer);
     peer.onicecandidate = (event) =>
       this.onPeerIceCandidate(event, data.userId);
@@ -231,7 +233,7 @@ export default class HighNoonServer extends HighNoonBase {
     peer: HighNoonServerPeer,
     channel: RTCDataChannel
   ) => {
-    this.emitEvent("messageReceived", event.data);
+    this.emitEvent("messageReceived", JSON.parse(event.data));
   };
 
   private sendConnectedClients = (data: ClientGetConnectedClientsEvent) => {

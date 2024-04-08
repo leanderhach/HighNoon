@@ -48,11 +48,12 @@ export default class HighNoonClient extends HighNoonBase {
       this.initialized = false;
     }
 
-    this.socket?.on("server_offer", async (data: ServerOfferEvent) =>
-      await this.generateResponse(data)
+    this.socket?.on("server_offer", (data: ServerOfferEvent) =>
+      this.generateResponse(data)
     );
 
     this.socket?.on("message", (data) => {
+      
       this.printDebugMessage("Recieved safe message from server: " + data);
       this.emitEvent("safeMessage", data);
     })
@@ -66,7 +67,7 @@ export default class HighNoonClient extends HighNoonBase {
 
   send = (message: any) => {
     if (this.channel) {
-      this.channel.send(message);
+      this.channel.send(JSON.stringify(message));
     }
   };
 
@@ -103,8 +104,6 @@ export default class HighNoonClient extends HighNoonBase {
         resolve({ data: null, error: "Connection Timed out" });
       }, 10000);
 
-      console.log("debug is: " + this.options.showDebug)
-
       this.socket!.emit("join_room", {
         roomId: roomId,
         userId: this.userId,
@@ -140,9 +139,9 @@ export default class HighNoonClient extends HighNoonBase {
     const answer = new RTCSessionDescription(await this.peer.createAnswer());
     this.peer.setLocalDescription(answer);
 
-    this.peer.onicecandidate = async (event) => await this.onIceCandidate(event);
-    this.peer.onicegatheringstatechange = async () =>
-      await this.onIceGatheringStateChange(answer);
+    this.peer.onicecandidate = (event) => this.onIceCandidate(event);
+    this.peer.onicegatheringstatechange = () =>
+      this.onIceGatheringStateChange(answer);
   };
 
   //--------------------------//
@@ -176,6 +175,6 @@ export default class HighNoonClient extends HighNoonBase {
 
   private handleChannelMessage = (event: MessageEvent) => {
     this.printDebugMessage("Recieved message from server: " + JSON.stringify(event.data));
-    this.emitEvent("messageReceived", event.data);
+    this.emitEvent("messageReceived", JSON.parse(event.data));
   };
 }
