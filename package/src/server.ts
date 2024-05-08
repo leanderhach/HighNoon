@@ -233,7 +233,10 @@ export default class HighNoonServer extends HighNoonBase {
     peer: HighNoonServerPeer,
     channel: RTCDataChannel
   ) => {
-    this.emitEvent("messageReceived", JSON.parse(event.data));
+    this.emitEvent("messageReceived", {
+      meta: peer,
+      data: JSON.parse(event.data),
+    });
   };
 
   private sendConnectedClients = (data: ClientGetConnectedClientsEvent) => {
