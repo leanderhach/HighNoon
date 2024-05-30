@@ -78,16 +78,16 @@ export default class HighNoonServer extends HighNoonBase {
 
   sendToSafe = (userId: string, message: any) => {
     this.printDebugMessage("Sending safe message to: " + userId);
-      const peer = this.foreignPeers.find((p) => p.userId === userId);
-      if (peer) {
-        this.socket?.emit("send_message_to", {
-          to: peer.socketId,
-          payload: message,
-        });
-        return { data: { success: true }, error: null };
-      } else {
-        return { data: { success: false }, error: "Client not found" };
-      }
+    const peer = this.foreignPeers.find((p) => p.userId === userId);
+    if (peer) {
+      this.socket?.emit("send_message_to", {
+        to: peer.socketId,
+        payload: message,
+      });
+      return { data: { success: true }, error: null };
+    } else {
+      return { data: { success: false }, error: "Client not found" };
+    }
   }
 
   getConnectedClients = (): ClientListData => {
@@ -97,7 +97,7 @@ export default class HighNoonServer extends HighNoonBase {
           userId: peer.userId,
           socketId: peer.socketId,
         };
-        
+
         return res;
       }),
       count: this.foreignPeers.length,
@@ -112,10 +112,12 @@ export default class HighNoonServer extends HighNoonBase {
       peer.channel?.close();
       peer.peer.close();
       this.foreignPeers = this.foreignPeers.filter((p) => p.userId !== userId);
-    }
 
-    // send an updated list of clients to every client still connected
-    this
+      this.socket!.emit("update_client_list", {
+        roomId: this.currentRoom,
+        payload: this.getConnectedClients(),
+      })
+    }
 
     return this.getConnectedClients();
   }
@@ -136,8 +138,15 @@ export default class HighNoonServer extends HighNoonBase {
           this.printDebugMessage(
             "Connection established with client: " + data.userId
           );
+
+          console.log("a new client has joined, do this")
           this.emitEvent("clientConnected", data.userId);
-          resolve(c); 
+          // send an update list of connected clients to all clients
+          this.socket!.emit("update_client_list", {
+            roomId: this.currentRoom,
+            payload: this.getConnectedClients(),
+          })
+          resolve(c);
         }
       };
     });
@@ -233,12 +242,16 @@ export default class HighNoonServer extends HighNoonBase {
     peer: HighNoonServerPeer,
     channel: RTCDataChannel
   ) => {
-    this.emitEvent("messageReceived", JSON.parse(event.data));
+    this.emitEvent("messageReceived", {
+      meta: {
+        userId: peer.userId,
+        socketId: peer.socketId,
+      },
+      data: JSON.parse(event.data),
+    });
   };
 
   private sendConnectedClients = (data: ClientGetConnectedClientsEvent) => {
-    this.printDebugMessage("Got a request for connected clients. Sending response to: " + data.from);
-
     const clientData: ClientListData = {
       clients: this.foreignPeers.map((peer) => {
         return {

@@ -52,7 +52,13 @@ export type HighNoonServerPeer = {
   foreignIceCandidatesCollected: boolean;
 };
 
-export type HighNoonEvents = "serverConnectionEstablished" | "messageReceived" | "clientConnected";
+
+export type HighNoonClientPeer = {
+  usrId: string;
+  socketId: string;
+}
+
+export type HighNoonEvents = "serverConnectionEstablished" | "messageReceived" | "clientConnected" | "clientListUpdated";
 
 
 export type GuranteedMessageResponse = {

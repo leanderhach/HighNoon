@@ -3,6 +3,7 @@ import type {
   ClientListData,
   HNResponse,
   HighNoonClientConstructor,
+  HighNoonClientPeer,
   RoomJoinData,
 } from "./types";
 import { HighNoonBase } from "./base";
@@ -15,6 +16,10 @@ export default class HighNoonClient extends HighNoonBase {
   channelPromise: Promise<RTCDataChannel>;
   channel: RTCDataChannel | null = null;
   iceCandidates: RTCIceCandidate[] = [];
+
+
+  // other clients in the room
+  foreignPeers: HighNoonClientPeer[] = [];
 
   constructor(options: HighNoonClientConstructor) {
     if (!isWebRTCAvailable()) {
@@ -53,9 +58,17 @@ export default class HighNoonClient extends HighNoonBase {
     );
 
     this.socket?.on("message", (data) => {
-      
+
       this.printDebugMessage("Recieved safe message from server: " + data);
       this.emitEvent("safeMessage", data);
+    })
+
+    this.socket?.on("update_client_list", (data) => {
+      this.foreignPeers = data.clients;
+
+      this.emitEvent("clientListUpdated", {
+        data: { clients: this.foreignPeers, count: this.foreignPeers.length }
+      });
     })
 
     this.channelPromise.then((channel) => {
@@ -87,8 +100,8 @@ export default class HighNoonClient extends HighNoonBase {
       this.socket?.on("connected_clients", (res) => {
         clearTimeout(timeout);
         resolve({ data: { clients: res.clients, count: res.clients.length }, error: null });
-        });
       });
+    });
   }
 
   connectToRoom = async (roomId: string): Promise<HNResponse<RoomJoinData>> => {
@@ -178,3 +191,4 @@ export default class HighNoonClient extends HighNoonBase {
     this.emitEvent("messageReceived", JSON.parse(event.data));
   };
 }
+
