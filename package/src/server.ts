@@ -112,10 +112,12 @@ export default class HighNoonServer extends HighNoonBase {
       peer.channel?.close();
       peer.peer.close();
       this.foreignPeers = this.foreignPeers.filter((p) => p.userId !== userId);
-    }
 
-    // send an updated list of clients to every client still connected
-    this
+      this.socket!.emit("update_client_list", {
+        roomId: this.currentRoom,
+        payload: this.getConnectedClients(),
+      })
+    }
 
     return this.getConnectedClients();
   }

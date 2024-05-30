@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { HighNoonClient, HighNoonServer } from "$lib/highnoon";
+  import { HighNoonClient, HighNoonServer } from "highnoon";
   import { parse } from "svelte/compiler";
 
   let client: HighNoonClient;
@@ -15,7 +15,6 @@
       projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
       showDebug: true,
-      signallingOverride: "http://localhost:8080",
     });
 
     await client.init();
@@ -34,7 +33,6 @@
       projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
       showDebug: true,
-      signallingOverride: "http://localhost:8080",
     });
 
     const { error } = await server.init();
