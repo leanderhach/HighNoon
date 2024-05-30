@@ -26,6 +26,11 @@
       const { data: clients, error: thing } = await client.getConnectedClients();
       console.log(clients, thing);
     });
+
+    client.on("clientListUpdated", (data) => {
+      console.log("the list of clients was updated")
+      console.log(data)
+    })
   }
 
   async function startRTCServer() {
