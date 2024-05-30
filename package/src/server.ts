@@ -137,6 +137,11 @@ export default class HighNoonServer extends HighNoonBase {
             "Connection established with client: " + data.userId
           );
           this.emitEvent("clientConnected", data.userId);
+          // send an update list of connected clients to all clients
+          this.socket!.emit("update_client_list", {
+              roomId: this.currentRoom,
+              payload: this.getConnectedClients(),
+          })
           resolve(c);
         }
       };
@@ -243,8 +248,6 @@ export default class HighNoonServer extends HighNoonBase {
   };
 
   private sendConnectedClients = (data: ClientGetConnectedClientsEvent) => {
-    this.printDebugMessage("Got a request for connected clients. Sending response to: " + data.from);
-
     const clientData: ClientListData = {
       clients: this.foreignPeers.map((peer) => {
         return {

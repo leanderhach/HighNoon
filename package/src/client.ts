@@ -58,6 +58,12 @@ export default class HighNoonClient extends HighNoonBase {
       this.emitEvent("safeMessage", data);
     })
 
+    this.socket.on("update_client_list", (data) => {
+      this.emitEvent("clientListUpdated", {
+        data: { clients: data.clients, count: data.count}
+      });
+    })
+
     this.channelPromise.then((channel) => {
       this.channel = channel;
       this.channel.onmessage = (event) => this.handleChannelMessage(event);
