@@ -260,7 +260,6 @@ export default class HighNoonServer extends HighNoonBase {
   private handleChannelMessage = (
     event: MessageEvent,
     peer: HighNoonServerPeer,
-    channel: RTCDataChannel
   ) => {
     this.emitEvent("messageReceived", {
       meta: {
@@ -286,5 +285,17 @@ export default class HighNoonServer extends HighNoonBase {
       to: data.from,
       payload: clientData,
     });
+  }
+
+
+  private attachMetadata = (data: any) => {
+    return {
+      ...data,
+      meta: {
+        roomId: this.currentRoom,
+        initialized: this.initialized,
+        connectedToRoom: this.connectedToRoom,
+      },
+    };
   }
 }
