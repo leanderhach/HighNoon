@@ -4,6 +4,7 @@ import type {
   HNResponse,
   HighNoonClientConstructor,
   HighNoonClientPeer,
+  HighNoonEvent,
   RoomJoinData,
 } from "./types";
 import { HighNoonBase } from "./base";
@@ -12,6 +13,7 @@ import { isWebRTCAvailable } from "./util";
 
 export default class HighNoonClient extends HighNoonBase {
   userId: string;
+  socketId: string;
   peer: RTCPeerConnection;
   channelPromise: Promise<RTCDataChannel>;
   channel: RTCDataChannel | null = null;
@@ -30,6 +32,7 @@ export default class HighNoonClient extends HighNoonBase {
     this.userId = options.userId
       ? options.userId + "-" + nanoid(4)
       : `user-${nanoid(8)}`;
+    this.socketId = "";
 
     this.peer = new RTCPeerConnection({
       iceServers: this.options.iceServers,
@@ -57,31 +60,45 @@ export default class HighNoonClient extends HighNoonBase {
       this.generateResponse(data)
     );
 
-    this.socket?.on("message", (data) => {
+    this.socket?.on("message", (data: HighNoonEvent['safeMessageReceived']) => {
 
       this.printDebugMessage("Recieved safe message from server: " + data);
       this.emitEvent("safeMessage", data);
     })
 
-    this.socket?.on("update_client_list", (data) => {
+    this.socket?.on("update_client_list", (data: HighNoonEvent['clientListUpdated']) => {
       this.foreignPeers = data.clients;
 
-      this.emitEvent("clientListUpdated", {
-        data: { clients: this.foreignPeers, count: this.foreignPeers.length }
-      });
+      this.emitEvent("clientListUpdated", data);
     })
 
     this.channelPromise.then((channel) => {
       this.channel = channel;
-      this.channel.onmessage = (event) => this.handleChannelMessage(event);
+      this.channel.onmessage = ({ data }: { data: HighNoonEvent['serverPacketReceived'] }) => this.handleChannelMessage(data);
       this.emitEvent("serverConnectionEstablished");
     });
   };
 
-  send = (message: any) => {
+  send = (payload: any) => {
     if (this.channel) {
-      this.channel.send(JSON.stringify(message));
+      this.channel.send(JSON.stringify({payload: payload}));
     }
+  };
+
+  sendSafe = (message: any, stringify: boolean = false) => {
+    if (this.socket) {
+      this.socket.emit("client_send_message", this.attachMetaData({
+        payload: stringify ? JSON.stringify(message) : message,
+      }));
+    }
+  };
+
+  sendToSafe = (userId: string, message: any, stringify: boolean = false) => {
+    this.printDebugMessage("Sending a WebSocket message to: " + userId);
+    this.socket?.emit("client_send_message_to", this.attachMetaData({
+      to: userId,
+      payload: stringify ? JSON.stringify(message) : message,
+    }))
   };
 
   getConnectedClients = async (): Promise<HNResponse<ClientListData>> => {
@@ -99,7 +116,7 @@ export default class HighNoonClient extends HighNoonBase {
 
       this.socket?.on("connected_clients", (res) => {
         clearTimeout(timeout);
-        resolve({ data: { clients: res.clients, count: res.clients.length }, error: null });
+        resolve({ data: res, error: null });
       });
     });
   }
@@ -126,6 +143,7 @@ export default class HighNoonClient extends HighNoonBase {
         clearTimeout(timeout);
         this.connectedToRoom = true;
         this.currentRoom = res.roomId;
+        this.socketId = res.socketId;
         this.printDebugMessage("Connected to room: " + res.roomId);
         resolve({ data: { room: res.roomId, connectedClients: res.connectedClients }, error: null })
       });
@@ -186,9 +204,21 @@ export default class HighNoonClient extends HighNoonBase {
     }
   };
 
-  private handleChannelMessage = (event: MessageEvent) => {
-    this.printDebugMessage("Recieved message from server: " + JSON.stringify(event.data));
-    this.emitEvent("messageReceived", JSON.parse(event.data));
+  private handleChannelMessage = (event: HighNoonEvent['serverPacketReceived']) => {
+    console.log("the raw data was ", JSON.stringify(event));
+    this.printDebugMessage("Recieved message from server: " + this.decodeMessagePayload(event));
+    this.emitEvent("serverPacketReceived", this.decodeMessagePayload(event));
   };
+
+  private attachMetaData = (data: any) => {
+    return {
+      meta: {
+        userId: this.userId,
+        roomId: this.currentRoom,
+        socketId: this.socketId
+      },
+      ...data
+    }
+  }
 }
 

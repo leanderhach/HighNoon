@@ -50,6 +50,7 @@ export type HighNoonServerPeer = {
   foreignOffer: RTCSessionDescription | null;
   foreignIceCandidates: RTCIceCandidate[];
   foreignIceCandidatesCollected: boolean;
+  isHost: boolean;
 };
 
 export type HighNoonClientPeer = {
@@ -57,9 +58,42 @@ export type HighNoonClientPeer = {
   socketId: string;
 }
 
-export type HighNoonEvents = "serverConnectionEstablished" | "messageReceived" | "clientConnected" | "clientListUpdated";
-
-
 export type GuranteedMessageResponse = {
   success: boolean;
 };
+
+export type ServerMetadata = {
+  roomId: string;
+  initialized: boolean;
+  connectedToRoom: boolean;
+}
+
+export interface HighNoonEvent {
+  serverConnectionEstablished: {},
+  clientPacketReceived: {
+    meta: ServerMetadata;
+    from: HighNoonClientPeer;
+    payload: any;
+  },
+  serverPacketReceived: any
+  clientConnected: ServerMetadata & {
+    userId: string;
+  },
+  clientListUpdated: ServerMetadata & {
+    clients: HighNoonClientPeer[];
+    isJoin: boolean;
+    newClient?: HighNoonClientPeer;
+    removedClient?: HighNoonClientPeer;
+  },
+  safeMessageReceived: {
+    meta: ServerMetadata,
+    to: string;
+    payload: any;
+  },
+}
+
+export type HighNoonEvents = keyof HighNoonEvent;
+
+export type ClientMessage = {
+  payload: any;
+}

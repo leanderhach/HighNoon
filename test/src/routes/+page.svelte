@@ -32,6 +32,11 @@
       console.log("the list of clients was updated")
       console.log(data)
     })
+
+    client.on("serverPacketReceived", (data) => {
+      console.log(data);
+      client.send({thing: "hello", other: "world"});
+    })
   }
 
   async function startRTCServer() {
@@ -57,6 +62,10 @@
     }
 
     server.broadcast("hello from server");
+
+    server.on("clientPacketReceived", (data) => {
+      console.log(data);
+    })
   }
 
   async function sendSafe() {

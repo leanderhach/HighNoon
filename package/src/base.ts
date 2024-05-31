@@ -3,6 +3,7 @@ import type { Socket } from "socket.io-client";
 import type {
   HighNoonClientConstructor,
   HighNoonClientOptions,
+  HighNoonEvent,
   HighNoonEvents,
   HNResponse,
   Initialize,
@@ -119,11 +120,15 @@ export class HighNoonBase {
     }
   }
 
-  on(eventName: HighNoonEvents, listener: (...args: any[]) => void) {
+  on<K extends HighNoonEvents>(eventName: K, listener: (data: HighNoonEvent[K]) => void) {
     if (this.eventTarget instanceof EventEmitter) {
       this.eventTarget.on(eventName, listener);
     } else {
-      this.eventTarget.addEventListener(eventName, listener as EventListener);
+      const wrappedListener = (event: Event) => {
+
+        listener((event as CustomEvent).detail as HighNoonEvent[K]);
+      };
+      this.eventTarget.addEventListener(eventName, wrappedListener as EventListener);
     }
   }
 
@@ -153,4 +158,26 @@ export class HighNoonBase {
       console.log(chalk.blue(message));
     }
   };
+
+  protected decodeMessagePayload = (message: any) => {
+    if (typeof message === "string") {
+      try {
+        return JSON.parse(message);
+      } catch (e) {
+        return message;
+      }
+    } else {
+      try {
+        return {
+          ...message,
+          payload: JSON.parse(message.payload),
+        }
+      } catch (e) {
+        return {
+          ...message,
+          payload: message.payload,
+        }
+      }
+    }
+  }
 }
