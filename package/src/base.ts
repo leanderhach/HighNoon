@@ -73,7 +73,6 @@ export class HighNoonBase {
     return new Promise<HNResponse<Initialize>>(async (resolve) => {
       // connect to the signalling server
       // initialize the socket for signalling
-      console.log(this.options.signallingOverride);
       this.socket = io(this.options.signallingOverride || "https://service.gethighnoon.com", {
         auth: {
           projectId: this.projectId,

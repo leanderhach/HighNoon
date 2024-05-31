@@ -12,9 +12,17 @@ import type {
 import type { ClientAnswerEvent, ClientGetConnectedClientsEvent, ClientJoinEvent } from "./serverTypes";
 import { isWebRTCAvailable } from "./util";
 
+/**
+ * HighNoonServer class
+ */
 export default class HighNoonServer extends HighNoonBase {
   foreignPeers: HighNoonServerPeer[] = [];
 
+  /**
+   * Constructor for the HighNoonServer class
+   * 
+   * @param options options for the HighNoonClient, as defined in the HighNoonClientConstructor type
+   */
   constructor(options: HighNoonClientConstructor) {
     if (!isWebRTCAvailable()) {
       throw new Error("WebRTC is not available in this environment");
@@ -22,6 +30,14 @@ export default class HighNoonServer extends HighNoonBase {
     super(options, "server");
   }
 
+  /**
+   * Initalize a HghNoonServer instance
+   * @returns {
+   * data: {
+   *  server: string
+   * } | error: string 
+   * }
+   */
   init = async () => {
 
     const { data, error } = await this.initBase();
@@ -142,7 +158,13 @@ export default class HighNoonServer extends HighNoonBase {
           // send an update list of connected clients to all clients
           this.socket!.emit("update_client_list", {
               roomId: this.currentRoom,
-              payload: this.getConnectedClients(),
+            payload: {
+              newClient: {
+                userId: data.userId,
+                sockerId: data.socketId
+              },
+              clients: this.getConnectedClients(),
+              },
           })
           resolve(c);
         }
