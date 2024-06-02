@@ -54,7 +54,7 @@ export type HighNoonServerPeer = {
 };
 
 export type HighNoonClientPeer = {
-  usrId: string;
+  userId: string;
   socketId: string;
 }
 
