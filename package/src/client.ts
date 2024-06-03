@@ -67,7 +67,7 @@ export default class HighNoonClient extends HighNoonBase {
     })
 
     this.socket?.on("update_client_list", (data: HighNoonEvent['clientListUpdated']) => {
-      this.foreignPeers = data.clients;
+      this.foreignPeers = data.clients.clients;
 
       this.emitEvent("clientListUpdated", data);
     })
