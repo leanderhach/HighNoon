@@ -142,9 +142,7 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
     this.printDebugMessage("Sending WebRTC message to: " + userId);
     const peer = this.foreignPeers.find((p) => p.userId === userId);
     if (peer) {
-      peer.channel?.send(JSON.stringify({
-        payload: message,
-      }));
+      peer.channel?.send(JSON.stringify(message));
 
       return { data: { success: true }, error: null };
     } else {
