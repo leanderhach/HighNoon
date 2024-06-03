@@ -97,7 +97,7 @@ export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
 
   send = (payload: any) => {
     if (this.channel) {
-      this.channel.send(JSON.stringify({ payload: payload }));
+      this.channel.send(JSON.stringify(payload));
     }
   };
 
