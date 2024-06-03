@@ -15,7 +15,6 @@
       projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
       showDebug: true,
-      signallingOverride: "ws://localhost:8080",
     });
 
     await client.init();
@@ -49,7 +48,6 @@
       projectId: "3R9VBppB",
       apiToken: "VfKvPkZj8C7vyz2EsFb1zXXbkRzFYpj0",
       showDebug: true,
-      signallingOverride: "ws://localhost:8080",
     });
 
     const { error } = await server.init();
@@ -71,9 +69,16 @@
       console.log(data);
 
       server.send(data.meta.userId, {
-        thing: "hello",
-        other: "world",
-      });
+        "type": "seedItem",
+        "table": "gameSettings",
+        "data": [
+            {
+                "name": "dsada",
+                "connectedPlayers": 1,
+                "id": 1
+            }
+        ]
+    });
     })
     }
   }

@@ -15,12 +15,18 @@ import { isWebRTCAvailable } from "./util";
 
 /**
  * HighNoonServer class
+ * 
+ * Class for the HighNoonServer. Docuemntation for this class can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
+ * 
+ * @extends HighNoonBase
  */
 export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
   foreignPeers: HighNoonServerPeer[] = [];
 
   /**
    * Constructor for the HighNoonServer class
+   * 
+   * Documentation for this class can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
    * 
    * @param options options for the HighNoonClient, as defined in the HighNoonClientConstructor type
    */
@@ -32,7 +38,10 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
   }
 
   /**
-   * Initialize the HighNoonServer
+   * This functions should be called after a HighNoonServer instance is created. It will
+   * initialize the server and connect it to the HighNoon signaling server.
+   * 
+   * Documentation can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
    * 
    * @returns HNResponse<Initialize>
    */
@@ -65,6 +74,14 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
    * 
    */
 
+
+  /**
+   * Creates a new room for the server to manage. This step is required to allow clients to interact with the server.
+   * 
+   * Documentation can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
+   * 
+   * @returns Promise<HNResponse<CreateRoomData>>
+   */
   createRoom = async () => {
     return new Promise<HNResponse<CreateRoomData>>((resolve) => {
       const timeout = setTimeout(() => {
@@ -97,6 +114,14 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
    * 
    */
 
+  /**
+   * This function will send a given message to all clients via the WebRTC connection. Note that 
+   * the message will be stringified before being sent. 
+   * 
+   * Documentation can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
+   * 
+   * @param message the message to be sent. This will be stringified before being sent
+   */
   broadcast = (message: any) => {
     console.log(chalk.green("Broadcasting WebRTC message to all clients: " + JSON.stringify(message)));
     this.foreignPeers.forEach((peer) => {
@@ -104,13 +129,20 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
     });
   };
 
+  /**
+   * Sends a message to a specific client via the WebRTC connection. Note that the message will be stringified before being sent.
+   * 
+   * Documentation can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
+   * 
+   * @param userId the user to send the message to
+   * @param message the message to be sent
+   * @returns If the user was found, the function will return a success. If the user was not found, the function will return an error.
+   */
   send = (userId: string, message: any) => {
     this.printDebugMessage("Sending WebRTC message to: " + userId);
     const peer = this.foreignPeers.find((p) => p.userId === userId);
     if (peer) {
-      peer.channel?.send(JSON.stringify({
-        payload: message,
-      }));
+      peer.channel?.send(JSON.stringify(message));
 
       return { data: { success: true }, error: null };
     } else {
@@ -118,6 +150,14 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
     }
   };
 
+  /**
+   * Sends a message to all clients connected to the room via a WebSocket connection.
+   * 
+   * Documentation can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
+   * 
+   * @param message the message to be sent
+   * @param stringify whether or not to stringify the message before sending
+   */
   relay = (message: any, stringify: boolean = false) => {
     this.printDebugMessage("Broadcasting WebSocket message to all clients: " + JSON.stringify(message));
     this.socket?.emit("server_send_message", this.attachMetadata({
@@ -125,6 +165,16 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
     }));
   }
 
+  /**
+   * Sends a message to a specified client via the WebSocket connection.
+   * 
+   * Documentation can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
+   * 
+   * @param userId the user to send the message to
+   * @param message the message to be sent
+   * @param stringify whether or not to stringify the message before sending
+   * @returns If the user was found, the function will return a success. If the user was not found, the function will return an error.
+   */
   relayTo = (userId: string, message: any, stringify: boolean = false) => {
     this.printDebugMessage("Sending WebSocket message to: " + userId);
     const peer = this.foreignPeers.find((p) => p.userId === userId);
@@ -139,6 +189,15 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
     }
   }
 
+  /**
+   * This function will return a list of all clients connected to the server. In many instances, it may be more 
+   * convenient to use the `clientListUpdated` event to get a list of connected clients instead as this is 
+   * guaranteed to be up to date.
+   * 
+   * Documentation can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
+   * 
+   * @returns a list of connected clients
+   */
   getConnectedClients = (): ClientListData => {
     return {
       clients: this.foreignPeers.map((peer) => {
@@ -153,6 +212,15 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
     };
   }
 
+  /**
+   * Kicks a client from the server using their userId. This will close the WebRTC connection and remove the client from
+   * the signalling room. It will also send an updated list of connected clients to all clients.
+   * 
+   * Documentation can be found at the [HighNoon Documentation](https://docs.gethighnoon.com)
+   * 
+   * @param userId the user to kick from the server
+   * @returns a list of connected clients after the user has been kicked
+   */
   kickClient = (userId: string): ClientListData => {
     // locate the peer
     const peer = this.foreignPeers.find((p) => p.userId === userId);
@@ -308,7 +376,6 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
   };
 
   private handleRelayMessage = (data: HighNoonRelayMessage) => {
-    this.printDebugMessage("Received relay message: " + JSON.stringify(data));
 
     // we can ignore the message if it is not addressed to the server
     if (!data.to || data.to !== "server") {
