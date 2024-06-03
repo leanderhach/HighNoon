@@ -139,9 +139,10 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
    * @returns If the user was found, the function will return a success. If the user was not found, the function will return an error.
    */
   send = (userId: string, message: any) => {
-    this.printDebugMessage("Sending WebRTC message to: " + userId);
+    this.printDebugMessage("Sending the following message: " + JSON.stringify(message) + ", to user: " + userId);
     const peer = this.foreignPeers.find((p) => p.userId === userId);
     if (peer) {
+      this.printDebugMessage("User found, sending message")
       peer.channel?.send(JSON.stringify(message));
 
       return { data: { success: true }, error: null };
