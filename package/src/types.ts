@@ -80,7 +80,7 @@ export interface HighNoonEvent {
     userId: string;
   },
   clientListUpdated: ServerMetadata & {
-    clients: HighNoonClientPeer[];
+    clients: ClientListData;
     isJoin: boolean;
     newClient?: HighNoonClientPeer;
     removedClient?: HighNoonClientPeer;
