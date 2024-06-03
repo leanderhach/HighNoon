@@ -3,15 +3,16 @@ import type {
   ClientListData,
   HNResponse,
   HighNoonClientConstructor,
+  HighNoonClientEvents,
   HighNoonClientPeer,
-  HighNoonEvent,
+  HighNoonRelayMessage,
   RoomJoinData,
 } from "./types";
 import { HighNoonBase } from "./base";
 import type { ClientAnswerEvent, ServerOfferEvent } from "./serverTypes";
 import { isWebRTCAvailable } from "./util";
 
-export default class HighNoonClient extends HighNoonBase {
+export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
   userId: string;
   socketId: string;
   peer: RTCPeerConnection;
@@ -60,32 +61,47 @@ export default class HighNoonClient extends HighNoonBase {
       this.generateResponse(data)
     );
 
-    this.socket?.on("message", (data: HighNoonEvent['safeMessageReceived']) => {
+    this.socket?.on("message", (data: HighNoonRelayMessage) => {
+      this.printDebugMessage("Recieved a message via Websocket: " + JSON.stringify(data));
 
-      this.printDebugMessage("Recieved safe message from server: " + data);
-      this.emitEvent("safeMessage", data);
+      if ('userId' in data.meta) {
+        this.emitEvent("relayFromClient", data);
+      } else {
+        this.emitEvent("relayFromServer", data);
+      }
+
+      this.emitEvent("relay", data)
     })
 
-    this.socket?.on("update_client_list", (data: HighNoonEvent['clientListUpdated']) => {
-      this.foreignPeers = data.clients;
+    this.socket?.on("update_client_list", (data: HighNoonClientEvents['clientListUpdated']) => {
+      this.foreignPeers = data.clients.clients;
 
       this.emitEvent("clientListUpdated", data);
     })
 
     this.channelPromise.then((channel) => {
       this.channel = channel;
-      this.channel.onmessage = ({ data }: { data: HighNoonEvent['serverPacketReceived'] }) => this.handleChannelMessage(data);
+      this.channel.onmessage = ({ data }: { data: HighNoonClientEvents['packet'] }) => this.handleChannelMessage(data);
       this.emitEvent("serverConnectionEstablished");
     });
   };
 
+
+  /**
+   * 
+   * MESSAGING HANDLERS
+   * 
+   * These functions are used to send messages to the server and other clients over both WebRTC and the WebSocket connection
+   * 
+   */
+
   send = (payload: any) => {
     if (this.channel) {
-      this.channel.send(JSON.stringify({payload: payload}));
+      this.channel.send(JSON.stringify({ payload: payload }));
     }
   };
 
-  sendSafe = (message: any, stringify: boolean = false) => {
+  relay = (message: any, stringify: boolean = false) => {
     if (this.socket) {
       this.socket.emit("client_send_message", this.attachMetaData({
         payload: stringify ? JSON.stringify(message) : message,
@@ -93,13 +109,22 @@ export default class HighNoonClient extends HighNoonBase {
     }
   };
 
-  sendToSafe = (userId: string, message: any, stringify: boolean = false) => {
+  relayTo = (userId: string, message: any, stringify: boolean = false) => {
     this.printDebugMessage("Sending a WebSocket message to: " + userId);
     this.socket?.emit("client_send_message_to", this.attachMetaData({
       to: userId,
       payload: stringify ? JSON.stringify(message) : message,
     }))
   };
+
+
+  /**
+   * 
+   * ROOM HANDLERS
+   * 
+   * These functions are used to connect to a room and get information about the clients in the room
+   * 
+   */
 
   getConnectedClients = async (): Promise<HNResponse<ClientListData>> => {
     if (!this.connectedToRoom) {
@@ -156,28 +181,13 @@ export default class HighNoonClient extends HighNoonBase {
     });
   };
 
-  private generateResponse = async (data: ServerOfferEvent) => {
-    this.printDebugMessage("Recieved server offer!");
-    // set the remote description of the connection to that recieved from the server
-    this.peer.setRemoteDescription(data.offer);
-
-    // transfer the server ice candiates to the client
-    for (const candidate of data.candidates) {
-      this.peer.addIceCandidate(candidate);
-    }
-
-    // create an answer session description
-    const answer = new RTCSessionDescription(await this.peer.createAnswer());
-    this.peer.setLocalDescription(answer);
-
-    this.peer.onicecandidate = (event) => this.onIceCandidate(event);
-    this.peer.onicegatheringstatechange = () =>
-      this.onIceGatheringStateChange(answer);
-  };
-
-  //--------------------------//
-  // RTC ACCESSORY FUNCTIONS //
-  //-------------------------//
+  /**
+   * 
+   * RTC HANDLERS
+   * 
+   * Functions for managing the WebRTC connection between the client and server
+   * 
+   */
 
   private onIceCandidate = async ({
     candidate,
@@ -204,11 +214,37 @@ export default class HighNoonClient extends HighNoonBase {
     }
   };
 
-  private handleChannelMessage = (event: HighNoonEvent['serverPacketReceived']) => {
-    console.log("the raw data was ", JSON.stringify(event));
-    this.printDebugMessage("Recieved message from server: " + this.decodeMessagePayload(event));
-    this.emitEvent("serverPacketReceived", this.decodeMessagePayload(event));
+  private generateResponse = async (data: ServerOfferEvent) => {
+    this.printDebugMessage("Recieved server offer!");
+    // set the remote description of the connection to that recieved from the server
+    this.peer.setRemoteDescription(data.offer);
+
+    // transfer the server ice candiates to the client
+    for (const candidate of data.candidates) {
+      this.peer.addIceCandidate(candidate);
+    }
+
+    // create an answer session description
+    const answer = new RTCSessionDescription(await this.peer.createAnswer());
+    this.peer.setLocalDescription(answer);
+
+    this.peer.onicecandidate = (event) => this.onIceCandidate(event);
+    this.peer.onicegatheringstatechange = () =>
+      this.onIceGatheringStateChange(answer);
   };
+
+  private handleChannelMessage = (event: HighNoonClientEvents["packet"]) => {
+    this.printDebugMessage("Recieved message from server: " + this.decodeMessagePayload(event));
+    this.emitEvent("packet", this.decodeMessagePayload(event));
+  };
+
+
+
+  /**
+   * 
+   * UTILITY FUNCTIONS
+   * 
+   */
 
   private attachMetaData = (data: any) => {
     return {

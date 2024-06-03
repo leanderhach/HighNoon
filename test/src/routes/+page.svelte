@@ -21,11 +21,10 @@
     await client.init();
     const { data, error } = await client.connectToRoom(roomName);
 
-    console.log(data, error);
-
     client.on("serverConnectionEstablished", async () => {
       const { data: clients, error: thing } = await client.getConnectedClients();
       console.log(clients, thing);
+      clientConnected = true;
     });
 
     client.on("clientListUpdated", (data) => {
@@ -33,9 +32,15 @@
       console.log(data)
     })
 
-    client.on("serverPacketReceived", (data) => {
+    client.on("packet", (data) => {
+      console.log("Response from")
       console.log(data);
       client.send({thing: "hello", other: "world"});
+    })
+
+    client.on("relayFromServer", (data) => {
+      console.log("we got a relay message from the server");
+      console.log(data);
     })
   }
 
@@ -52,6 +57,24 @@
     if (!error) {
       const { data, error } = await server.createRoom();
       console.log(data!.room);
+
+    server.on("packet", (data) => {
+      console.log(data);
+    })
+
+    server.on("clientConnected", () => {
+      console.log("a new client has connected")
+    })
+
+    server.on("relay", (data) => {
+      console.log("we got a relay message from a client");
+      console.log(data);
+
+      server.send(data.meta.userId, {
+        thing: "hello",
+        other: "world",
+      });
+    })
     }
   }
 
@@ -62,15 +85,20 @@
     }
 
     server.broadcast("hello from server");
-
-    server.on("clientPacketReceived", (data) => {
-      console.log(data);
-    })
   }
 
   async function sendSafe() {
     console.log("its calling this")
-    server.broadcastSafe("hello from server");
+    server.relay("hello from server");
+  }
+
+  async function sendClientMessage() {
+    if (!client) {
+      console.log("client does not exist yet");
+      return;
+    }
+
+    client.relayTo("server", "hello from client");
   }
 
   let roomName = "";
@@ -81,6 +109,7 @@
 <button on:click={startRTCClient}>Join Room</button>
 {#if clientConnected}
   {client.currentRoom}
+  <button on:click={sendClientMessage}>Send From Client</button>
 {/if}
 {#if server}
   <button on:click={sendServerMessage}>Send From Server</button>

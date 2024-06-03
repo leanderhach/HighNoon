@@ -54,7 +54,7 @@ export type HighNoonServerPeer = {
 };
 
 export type HighNoonClientPeer = {
-  usrId: string;
+  userId: string;
   socketId: string;
 }
 
@@ -68,31 +68,58 @@ export type ServerMetadata = {
   connectedToRoom: boolean;
 }
 
-export interface HighNoonEvent {
-  serverConnectionEstablished: {},
-  clientPacketReceived: {
+export type ClientMetadata = {
+  userId: string;
+  roomId: string;
+  socketId: string;
+}
+
+export type HighNoonRelayMessage = {
+  meta: ServerMetadata | ClientMetadata,
+  to?: string;
+  payload: any;
+}
+
+export interface HighNoonServerEvents {
+  clientConnected: {
+    meta: ServerMetadata;
+    userId: string;
+  },
+  packet: {
     meta: ServerMetadata;
     from: HighNoonClientPeer;
     payload: any;
   },
-  serverPacketReceived: any
-  clientConnected: ServerMetadata & {
-    userId: string;
+  relay: {
+    meta: ClientMetadata;
+    to?: string;
+    payload: any;
+  }
+}
+
+export interface HighNoonClientEvents {
+  serverConnectionEstablished: {},
+  relayFromClient: {
+    meta: ClientMetadata;
+    to?: string;
+    payload: any;
   },
+  relayFromServer: {
+    meta: ServerMetadata;
+    to?: string;
+    payload: any;
+  },
+  relay: HighNoonRelayMessage,
   clientListUpdated: ServerMetadata & {
     clients: ClientListData;
     isJoin: boolean;
     newClient?: HighNoonClientPeer;
     removedClient?: HighNoonClientPeer;
   },
-  safeMessageReceived: {
-    meta: ServerMetadata,
-    to: string;
-    payload: any;
-  },
+  packet: any;
 }
 
-export type HighNoonEvents = keyof HighNoonEvent;
+export type HighNoonEvents = HighNoonServerEvents | HighNoonClientEvents;
 
 export type ClientMessage = {
   payload: any;
