@@ -7,6 +7,8 @@ import type {
   HighNoonServerPeer,
   ClientListData,
   ClientMessage,
+  HighNoonServerEvents,
+  HighNoonRelayMessage,
 } from "./types";
 import type { ClientAnswerEvent, ClientGetConnectedClientsEvent, ClientJoinEvent } from "./serverTypes";
 import { isWebRTCAvailable } from "./util";
@@ -14,7 +16,7 @@ import { isWebRTCAvailable } from "./util";
 /**
  * HighNoonServer class
  */
-export default class HighNoonServer extends HighNoonBase {
+export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
   foreignPeers: HighNoonServerPeer[] = [];
 
   /**
@@ -47,8 +49,21 @@ export default class HighNoonServer extends HighNoonBase {
     this.socket!.on("client_joined", (data) => this.createPeerConnection(data));
     this.socket!.on("client_response", (data) => this.connectClient(data));
     this.socket!.on("get_connected_clients", (data) => this.sendConnectedClients(data))
+    this.socket!.on("message", (data) => this.handleRelayMessage(data));
     return { data, error };
   };
+
+  /**
+   * 
+   * 
+   * 
+   * ROOM HANDLERS
+   * 
+   * Functions to handler room creation and management
+   * 
+   * 
+   * 
+   */
 
   createRoom = async () => {
     return new Promise<HNResponse<CreateRoomData>>((resolve) => {
@@ -66,6 +81,22 @@ export default class HighNoonServer extends HighNoonBase {
     });
   };
 
+
+  /**
+   * 
+   * 
+   * 
+   * 
+   *  MESSAGING HANDLERS
+   * 
+   * 
+   * functions for sending and receving messages with clients
+   * 
+   * 
+   * 
+   * 
+   */
+
   broadcast = (message: any, stringify: boolean = true) => {
     console.log(chalk.green("Broadcasting WebRTC message to all clients: " + JSON.stringify(message)));
     this.foreignPeers.forEach((peer) => {
@@ -73,7 +104,7 @@ export default class HighNoonServer extends HighNoonBase {
     });
   };
 
-  sendTo = (userId: string, message: any, stringify: boolean = true) => {
+  send = (userId: string, message: any, stringify: boolean = true) => {
     this.printDebugMessage("Sending WebRTC message to: " + userId);
     const peer = this.foreignPeers.find((p) => p.userId === userId);
     if (peer) {
@@ -87,14 +118,14 @@ export default class HighNoonServer extends HighNoonBase {
     }
   };
 
-  broadcastSafe = (message: any, stringify: boolean = false) => {
+  relay = (message: any, stringify: boolean = false) => {
     this.printDebugMessage("Broadcasting WebSocket message to all clients: " + JSON.stringify(message));
     this.socket?.emit("server_send_message", this.attachMetadata({
       payload: stringify ? JSON.stringify(message) : message,
     }));
   }
 
-  sendToSafe = (userId: string, message: any, stringify: boolean = false) => {
+  relayTo = (userId: string, message: any, stringify: boolean = false) => {
     this.printDebugMessage("Sending WebSocket message to: " + userId);
     const peer = this.foreignPeers.find((p) => p.userId === userId);
     if (peer) {
@@ -265,7 +296,7 @@ export default class HighNoonServer extends HighNoonBase {
     data: ClientMessage,
     peer: HighNoonServerPeer,
   ) => {
-    this.emitEvent("clientPacketReceived",
+    this.emitEvent("packet",
       this.attachMetadata({
         from: {
           userId: peer.userId,
@@ -275,6 +306,16 @@ export default class HighNoonServer extends HighNoonBase {
       })
     );
   };
+
+  private handleRelayMessage = (data: HighNoonRelayMessage) => {
+
+    // we can ignore the message if it is not addressed to the server
+    if (!data.to || data.to !== "server") {
+      return;
+    }
+
+    this.emitEvent("relay", data);
+  }
 
   private sendConnectedClients = (data: ClientGetConnectedClientsEvent) => {
     this.socket?.emit("connected_clients", this.attachMetadata({

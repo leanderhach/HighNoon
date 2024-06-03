@@ -3,7 +3,6 @@ import type { Socket } from "socket.io-client";
 import type {
   HighNoonClientConstructor,
   HighNoonClientOptions,
-  HighNoonEvent,
   HighNoonEvents,
   HNResponse,
   Initialize,
@@ -12,7 +11,7 @@ import chalk from "chalk";
 import { nanoid } from "nanoid";
 import { EventEmitter } from "events";
 
-export class HighNoonBase {
+export class HighNoonBase<T extends HighNoonEvents> {
   options: HighNoonClientOptions;
   socket: Socket | null = null;
   projectId: string;
@@ -120,15 +119,15 @@ export class HighNoonBase {
     }
   }
 
-  on<K extends HighNoonEvents>(eventName: K, listener: (data: HighNoonEvent[K]) => void) {
+  on<K extends keyof T>(eventName: K, listener: (data: T[K]) => void) {
     if (this.eventTarget instanceof EventEmitter) {
-      this.eventTarget.on(eventName, listener);
+      this.eventTarget.on(eventName as string, listener);
     } else {
       const wrappedListener = (event: Event) => {
 
-        listener((event as CustomEvent).detail as HighNoonEvent[K]);
+        listener((event as CustomEvent).detail as T[K]);
       };
-      this.eventTarget.addEventListener(eventName, wrappedListener as EventListener);
+      this.eventTarget.addEventListener(eventName as string, wrappedListener as EventListener);
     }
   }
 
