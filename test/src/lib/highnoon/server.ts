@@ -139,9 +139,10 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
    * @returns If the user was found, the function will return a success. If the user was not found, the function will return an error.
    */
   send = (userId: string, message: any) => {
-    this.printDebugMessage("Sending WebRTC message to: " + userId);
+    this.printDebugMessage("Sending the following message: " + JSON.stringify(message) + ", to user: " + userId);
     const peer = this.foreignPeers.find((p) => p.userId === userId);
     if (peer) {
+      this.printDebugMessage("User found, sending message")
       peer.channel?.send(JSON.stringify(message));
 
       return { data: { success: true }, error: null };
@@ -242,6 +243,11 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
     return this.getConnectedClients();
   }
 
+  /**
+   * Creates a new peer connection when a client sends a join event to the server. this method uses the websocket connection 
+   * information to send an offer to the client and establish a peer connection.
+   * @param data information about the client to help create the peer connection
+   */
   private createPeerConnection = async (data: ClientJoinEvent) => {
 
     // create a new peer connection
@@ -271,6 +277,20 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
           resolve(c);
         }
       };
+
+      // handle the channel being closed
+      c.onclose = () => {
+        this.printDebugMessage("Channel closed with client: " + data.userId);
+        this.emitEvent("clientDisconnected", this.attachMetadata({ userId: data.userId }));
+        this.foreignPeers = this.foreignPeers.filter((p) => p.userId !== data.userId);
+        this.socket!.emit("update_client_list", this.attachMetadata({
+          isJoin: false,
+          removedClient: {
+            userId: data.userId,
+          },
+          clients: this.getConnectedClients(),
+        }))
+      }
     });
 
     const offer = new RTCSessionDescription(await peer.createOffer());

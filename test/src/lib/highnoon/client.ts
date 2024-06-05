@@ -82,6 +82,10 @@ export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
     this.channelPromise.then((channel) => {
       this.channel = channel;
       this.channel.onmessage = ({ data }: { data: HighNoonClientEvents['packet'] }) => this.handleChannelMessage(data);
+      this.channel.onclose = () => {
+        this.printDebugMessage("Data channel closed");
+        this.emitEvent("disconnected");
+      };
       this.emitEvent("serverConnectionEstablished");
     });
   };
@@ -97,7 +101,7 @@ export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
 
   send = (payload: any) => {
     if (this.channel) {
-      this.channel.send(JSON.stringify({ payload: payload }));
+      this.channel.send(JSON.stringify(payload));
     }
   };
 

@@ -94,11 +94,16 @@ export interface HighNoonServerEvents {
     meta: ClientMetadata;
     to?: string;
     payload: any;
+  },
+  clientDisconnected: {
+    meta: ServerMetadata;
+    userId: string;
   }
 }
 
 export interface HighNoonClientEvents {
   serverConnectionEstablished: {},
+  disconnected: {},
   relayFromClient: {
     meta: ClientMetadata;
     to?: string;

@@ -19,6 +19,7 @@
 
     await client.init();
     const { data, error } = await client.connectToRoom(roomName);
+    console.log(data, error)
 
     client.on("serverConnectionEstablished", async () => {
       const { data: clients, error: thing } = await client.getConnectedClients();
@@ -79,6 +80,11 @@
             }
         ]
     });
+    })
+
+    server.on("clientDisconnected", (data) => {
+      console.log("a client has disconnected")
+      console.log(data)
     })
     }
   }

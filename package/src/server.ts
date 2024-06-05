@@ -272,6 +272,20 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
           resolve(c);
         }
       };
+
+      // handle the channel being closed
+      c.onclose = () => {
+        this.printDebugMessage("Channel closed with client: " + data.userId);
+        this.emitEvent("clientDisconnected", this.attachMetadata({ userId: data.userId }));
+        this.foreignPeers = this.foreignPeers.filter((p) => p.userId !== data.userId);
+        this.socket!.emit("update_client_list", this.attachMetadata({
+          isJoin: false,
+          removedClient: {
+            userId: data.userId,
+          },
+          clients: this.getConnectedClients(),
+        }))
+      };
     });
 
     const offer = new RTCSessionDescription(await peer.createOffer());
