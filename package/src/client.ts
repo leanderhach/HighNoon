@@ -85,6 +85,7 @@ export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
       this.emitEvent("serverConnectionEstablished");
       this.channel.onclose = () => {
         this.printDebugMessage("Data channel closed");
+        this.socket.close();
         this.emitEvent("disconnected");
       };
     });
