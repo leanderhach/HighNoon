@@ -101,7 +101,11 @@ export class HighNoonBase<T extends HighNoonEvents> {
 
       this.socket.on("connect", () => {
         console.log(this.socket?.connected);
-        resolve({ data: { status: "connected" }, error: null });
+        this.socket?.emit("get_turn_auth");
+        this.socket?.on("turn_auth", (data) => {
+          console.log(data);
+          resolve({ data: { status: "connected" }, error: null });
+        })
       })
     });
   };

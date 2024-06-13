@@ -369,6 +369,8 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
 
   private connectClient = async (data: ClientAnswerEvent) => {
     const peer = this.foreignPeers.find((p) => p.socketId === data.from);
+    console.log("now trying to find peer", peer)
+    console.log("the client sent back:", data)
     if (peer) {
       peer.foreignIceCandidates = data.candidates;
       peer.foreignOffer = data.answer;
