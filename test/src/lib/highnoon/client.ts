@@ -15,8 +15,8 @@ import { isWebRTCAvailable } from "./util";
 export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
   userId: string;
   socketId: string;
-  peer: RTCPeerConnection;
-  channelPromise: Promise<RTCDataChannel>;
+  peer: RTCPeerConnection = new RTCPeerConnection();
+  channelPromise: Promise<RTCDataChannel> = new Promise(() => {});
   channel: RTCDataChannel | null = null;
   iceCandidates: RTCIceCandidate[] = [];
 
@@ -34,6 +34,14 @@ export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
       ? options.userId + "-" + nanoid(4)
       : `user-${nanoid(8)}`;
     this.socketId = "";
+  }
+
+  init = async () => {
+    console.log("Initializing client");
+
+    const res = await this.initBase(this.userId);
+
+    console.log("client options are:", this.options);
 
     this.peer = new RTCPeerConnection({
       iceServers: this.options.iceServers,
@@ -45,11 +53,7 @@ export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
         resolve(event.channel);
       };
     });
-  }
 
-  init = async () => {
-
-    const res = await this.initBase(this.userId);
     // create a new RTC offer and bind listeners to it
     if (this.socket!.connected) {
       this.initialized = true;

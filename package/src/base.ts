@@ -31,10 +31,7 @@ export class HighNoonBase<T extends HighNoonEvents> {
       showDebug: options.showDebug || false,
       iceServers: options.iceServers || [{ urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      {
-        urls: "stun:stun3.l.google.com:19302"
-      }],
+      { urls: "stun:stun2.l.google.com:19302" }],
       signallingOverride: options.signallingOverride || undefined,
     };
     this.type = type;
@@ -101,7 +98,13 @@ export class HighNoonBase<T extends HighNoonEvents> {
 
       this.socket.on("connect", () => {
         console.log(this.socket?.connected);
-        resolve({ data: { status: "connected" }, error: null });
+        this.socket?.emit("get_turn_auth");
+        this.socket?.on("turn_auth", (data) => {
+
+          this.options.iceServers!.push(data);
+
+          resolve({ data: { status: "connected" }, error: null });
+        })
       })
     });
   };

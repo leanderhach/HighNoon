@@ -250,6 +250,7 @@ export default class HighNoonServer extends HighNoonBase<HighNoonServerEvents> {
    */
   private createPeerConnection = async (data: ClientJoinEvent) => {
 
+    console.log("the server sees: ", this.options.iceServers)
     // create a new peer connection
     const peer = new RTCPeerConnection({
       iceServers: this.options.iceServers,

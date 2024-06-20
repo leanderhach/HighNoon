@@ -34,6 +34,11 @@ export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
       ? options.userId + "-" + nanoid(4)
       : `user-${nanoid(8)}`;
     this.socketId = "";
+  }
+
+  init = async () => {
+
+    const res = await this.initBase(this.userId);
 
     this.peer = new RTCPeerConnection({
       iceServers: this.options.iceServers,
@@ -45,11 +50,7 @@ export default class HighNoonClient extends HighNoonBase<HighNoonClientEvents> {
         resolve(event.channel);
       };
     });
-  }
-
-  init = async () => {
-
-    const res = await this.initBase(this.userId);
+    
     // create a new RTC offer and bind listeners to it
     if (this.socket!.connected) {
       this.initialized = true;
